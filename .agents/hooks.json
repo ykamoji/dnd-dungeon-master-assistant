@@ -3,7 +3,7 @@
     "Stop": [
       {
         "type": "command",
-        "command": "python3 /Users/ykamoji/Documents/dnd-game-master-assistant/.agents/save_conversation.py"
+        "command": "python3 /Users/ykamoji/Documents/dnd-game-master-assistant/.agents/scripts/save_conversation.py"
       }
     ]
   }
