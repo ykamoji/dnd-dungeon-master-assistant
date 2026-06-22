@@ -104,7 +104,7 @@ def main():
         output_dir = os.path.join(os.getcwd(), "agent_logs")
         os.makedirs(output_dir, exist_ok=True)
         
-        destination = os.path.join(output_dir, f"{conversation_id}_structured.json")
+        destination = os.path.join(output_dir, f"{conversation_id}.json")
         
         try:
             structured_data = parse_transcript(transcript_path)
