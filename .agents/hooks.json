@@ -3,7 +3,7 @@
     "Stop": [
       {
         "type": "command",
-        "command": "python3 .agents/scripts/save_conversation.py"
+        "command": "bash -c 'python3 \"$PWD/scripts/save_conversation.py\"'"
       }
     ]
   }
