@@ -1,6 +1,7 @@
 import sys
 import os
 import json
+from datetime import datetime, timezone
 
 # Directory where per-session conversation logs are written. Each session is
 # saved as <session_id>.json. Override the base dir with CONVO_LOG_DIR if desired.
@@ -164,11 +165,49 @@ def main():
         log_dir = os.path.abspath(os.environ.get("CONVO_LOG_DIR", DEFAULT_LOG_DIR))
         log_file = os.path.join(log_dir, f"{session_id}.json")
 
-        # The transcript holds the full session, so rewrite the file with the
-        # complete parse rather than appending (avoids duplicate exchanges).
+        # Append-only: load whatever is already saved and keep it untouched so old
+        # exchanges (and their timestamps) stay frozen forever -- even if the
+        # transcript is later deleted, the log retains the full history.
+        saved = []
+        if os.path.isfile(log_file):
+            try:
+                with open(log_file, "r", encoding="utf-8") as f:
+                    loaded = json.load(f)
+                if isinstance(loaded, list):
+                    saved = loaded
+            except (json.JSONDecodeError, OSError):
+                saved = []
+
+        # Find where the saved history ends within the freshly-parsed transcript by
+        # matching the last saved exchange's Input/Output, then append only what
+        # comes after it. If no match (e.g. transcript was reset), append all parsed
+        # exchanges that aren't already the saved tail.
+        new_exchanges = exchanges
+        if saved:
+            last = saved[-1]
+            last_key = (last.get("Input"), last.get("Output"))
+            match_index = None
+            for i in range(len(exchanges) - 1, -1, -1):
+                if (exchanges[i].get("Input"), exchanges[i].get("Output")) == last_key:
+                    match_index = i
+                    break
+            new_exchanges = (
+                exchanges[match_index + 1 :] if match_index is not None else exchanges
+            )
+
+        if not new_exchanges:
+            sys.exit(0)
+
+        # Only the newly-appended exchanges get a completion timestamp.
+        completed_at = datetime.now(timezone.utc).astimezone().isoformat()
+        for exchange in new_exchanges:
+            exchange["completed At"] = completed_at
+
+        saved.extend(new_exchanges)
+
         os.makedirs(log_dir, exist_ok=True)
         with open(log_file, "w", encoding="utf-8") as f:
-            json.dump(exchanges, f, indent=2, ensure_ascii=False)
+            json.dump(saved, f, indent=2, ensure_ascii=False)
 
         sys.exit(0)
 

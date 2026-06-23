@@ -1,6 +1,7 @@
 import sys
 import json
 import os
+from datetime import datetime, timezone
 
 def parse_transcript(transcript_path):
     turns = []
@@ -63,6 +64,9 @@ def parse_transcript(transcript_path):
                     current_turn["Output"] = content
 
     if current_turn:
+        # Stamp each exchange with the completion time (local tz, ISO 8601 w/ offset).
+        completed_at = datetime.now(timezone.utc).astimezone().isoformat()
+        current_turn["completed At"] = completed_at
         turns.append(current_turn)
         
     return turns
@@ -107,14 +111,44 @@ def main():
         destination = os.path.join(output_dir, f"{conversation_id}.json")
         
         try:
+            existing_data = []
+            if os.path.exists(destination):
+                try:
+                    with open(destination, 'r', encoding='utf-8') as in_f:
+                        existing_data = json.load(in_f)
+                        if not isinstance(existing_data, list):
+                            existing_data = []
+                except Exception:
+                    existing_data = []
+
             structured_data = parse_transcript(transcript_path)
+
+            if existing_data:
+                last_existing = existing_data[-1]
+                match_idx = -1
+                # Find the latest turn in structured_data that matches the last existing turn's Input and Output
+                for i in range(len(structured_data) - 1, -1, -1):
+                    cand = structured_data[i]
+                    if cand.get("Input") == last_existing.get("Input") and cand.get("Output") == last_existing.get("Output"):
+                        match_idx = i
+                        break
+                
+                if match_idx != -1:
+                    new_turns = structured_data[match_idx + 1:]
+                else:
+                    new_turns = structured_data
+            else:
+                new_turns = structured_data
+
+            existing_data.extend(new_turns)
+
             with open(destination, 'w', encoding='utf-8') as out_f:
-                json.dump(structured_data, out_f, indent=2, ensure_ascii=False)
+                json.dump(existing_data, out_f, indent=2, ensure_ascii=False)
         except Exception as e:
             # You can log this to a local debug file if needed
             debug_log = os.path.join(output_dir, "error.log")
             with open(debug_log, 'a', encoding='utf-8') as err_f:
-                err_f.write(f"Error parsing transcript: {str(e)}\n")
+                err_f.write(f"Error parsing/saving transcript: {str(e)}\n")
 
     # 3. Contract requirement: Must return JSON to stdout
     print(json.dumps({}))
