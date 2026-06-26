@@ -20,15 +20,7 @@ async def run_tests():
     except Exception as e:
         print(f"DB Health error: {e}")
         
-    # 2. Roll Dice
-    print("\nTesting roll_dice...")
-    try:
-        roll = TOOL_FUNCTIONS["roll_dice"](notation="2d6+3")
-        print(f"Roll result: {roll['total']} (from {roll['notation']})")
-    except Exception as e:
-        print(f"Roll error: {e}")
-        
-    # 3. Lookup Character
+    # 2. Lookup Character
     print("\nTesting lookup_character...")
     try:
         char = TOOL_FUNCTIONS["lookup_character"]("Acererak")
@@ -39,18 +31,22 @@ async def run_tests():
     except Exception as e:
         print(f"Lookup Character error: {e}")
         
-    # 4. Open5e Lookups
+    # 3. Open5e Lookups
     print("\nTesting Open5e lookups...")
     try:
-        spell = TOOL_FUNCTIONS["lookup_spell"]("Fireball")
+        spell = TOOL_FUNCTIONS["lookup_open5e"]("spells", "Fireball")
         if spell:
             print(f"Found spell: {spell.get('name')}")
         else:
             print("Fireball not found.")
+            
+        monster = TOOL_FUNCTIONS["lookup_open5e"]("monsters", "Goblin")
+        if monster:
+            print(f"Found monster: {monster.get('name')}")
     except Exception as e:
         print(f"Open5e error: {e}")
         
-    # 5. Asset URL
+    # 4. Asset URL
     print("\nTesting get_asset_url...")
     try:
         asset = TOOL_FUNCTIONS["get_asset_url"]("Port Nyanzaru")
@@ -63,36 +59,39 @@ async def run_tests():
         
     # DB dependent tests
     if db_ok:
-        print("\nTesting state updates (DB dependent)...")
+        print("\nTesting campaign state updates (DB dependent)...")
         try:
-            cid = "smoke_test_campaign_001"
-            # Update state
-            res = TOOL_FUNCTIONS["update_state"](
+            cid = "smoke_test_campaign_002"
+            # Update campaign summary and progress
+            res = TOOL_FUNCTIONS["update_campaign"](
                 campaign_id=cid,
-                scene="Smoke Test Scene",
+                summary="Smoke test summary 2",
+                progress=10.0
+            )
+            print(f"Update campaign summary: {res.get('summary')}")
+            
+            # Update state turn
+            res = TOOL_FUNCTIONS["update_campaign"](
+                campaign_id=cid,
+                scene="Smoke Test Scene 2",
                 description="Testing the API.",
                 metadata={"chapter": "test", "asset_urls": []},
                 initiative=["Tester"],
                 party={"characters": {"Tester": {"hp": 10, "max_hp": 10, "conditions": []}}},
-                progress=5.0
             )
-            print(f"Update state: {res['scene']}")
+            print(f"Update campaign state: appended turn")
             
-            # Get state
-            state = TOOL_FUNCTIONS["get_party_state"](cid)
-            print(f"Get state: {state['scene']}")
+            # Get campaign
+            camp = TOOL_FUNCTIONS["get_campaign"](cid)
+            print(f"Get campaign (no history): {camp.get('summary')} | {len(camp.get('state', []))} turn")
             
-            # Save summary
-            TOOL_FUNCTIONS["save_summary"](cid, "Smoke test summary")
-            
-            # Get summary
-            summary = TOOL_FUNCTIONS["get_summary"](cid)
-            print(f"Get summary: {summary['summary']}")
+            camp_full = TOOL_FUNCTIONS["get_campaign"](cid, include_history=True)
+            print(f"Get campaign (with history): {len(camp_full.get('state', []))} turns")
             
         except Exception as e:
             print(f"State test error: {e}")
     else:
-        print("\nSkipping state updates because MongoDB is not reachable.")
+        print("\nSkipping campaign updates because MongoDB is not reachable.")
         
     print("\n=== Phase 2: HTTP Route Calls ===")
     from app.fast_api_app import app
@@ -103,15 +102,13 @@ async def run_tests():
         res = await client.get("/health/db")
         print(f"GET /health/db: {res.status_code}")
         
-        # Roll Dice
-        res = await client.post("/tools/roll_dice", json={"notation": "1d20+5"})
-        print(f"POST /tools/roll_dice: {res.status_code}")
-        if res.status_code == 200:
-            print(f"  Result: {res.json()['total']}")
-            
         # Lookup Character
         res = await client.get("/tools/lookup_character/Acererak")
         print(f"GET /tools/lookup_character/Acererak: {res.status_code}")
+        
+        # Lookup Open5e
+        res = await client.get("/tools/lookup_open5e/spells/Fireball")
+        print(f"GET /tools/lookup_open5e/spells/Fireball: {res.status_code}")
         
     print("\nSmoke tests completed.")
     close_client()
