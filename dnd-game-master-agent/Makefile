@@ -11,6 +11,7 @@ help:
 	@echo "  make playground     Start the local ADK web playground"
 	@echo "  make run PROMPT=... Run a single prompt through the agent"
 	@echo "  make test           Run unit tests"
+	@echo "  make smoke-test     Run smoke tests for tools and custom routes"
 
 install:
 	agents-cli install
@@ -33,3 +34,6 @@ run:
 
 test:
 	uv run pytest tests/unit
+
+smoke-test:
+	uv run python smoke_test.py
