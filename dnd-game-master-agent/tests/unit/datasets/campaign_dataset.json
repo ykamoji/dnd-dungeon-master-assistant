@@ -1,0 +1,9 @@
+{
+  "tests": [
+    {
+      "id": "campaign_test_1",
+      "input": "What's happening in this scene right now?",
+      "expected_intent": "CAMPAIGN"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "tests": [
+    {
+      "id": "action_test_1",
+      "input": "I attack the goblin with my longsword",
+      "expected_intent": "ACTION"
+    }
+  ]
+}
