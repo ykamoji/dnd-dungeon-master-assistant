@@ -419,6 +419,9 @@ lint = [
     { name = "ruff" },
     { name = "ty" },
 ]
+local = [
+    { name = "litellm" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -436,12 +439,13 @@ requires-dist = [
     { name = "google-adk", extras = ["gcp"], specifier = ">=2.0.0a0,<3.0.0" },
     { name = "google-cloud-aiplatform", extras = ["evaluation"], marker = "extra == 'eval'", specifier = ">=1.156.0" },
     { name = "google-cloud-logging", specifier = ">=3.12.0,<4.0.0" },
+    { name = "litellm", marker = "extra == 'local'", specifier = ">=1.0" },
     { name = "opentelemetry-instrumentation-google-genai", specifier = ">=0.1.0,<1.0.0" },
     { name = "pymongo", specifier = ">=4.0,<5.0" },
     { name = "ruff", marker = "extra == 'lint'", specifier = ">=0.4.6,<1.0.0" },
     { name = "ty", marker = "extra == 'lint'", specifier = ">=0.0.1a0" },
 ]
-provides-extras = ["eval", "lint"]
+provides-extras = ["eval", "local", "lint"]
 
 [package.metadata.requires-dev]
 dev = [

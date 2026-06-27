@@ -33,7 +33,7 @@ run:
 	agents-cli run "$(PROMPT)"
 
 test:
-	set -a && source app/.env && set +a && uv run pytest tests/unit
+	set -a && . ./app/.env && set +a && uv run --extra local pytest tests/unit
 
 smoke-test:
 	uv run python smoke_test.py
