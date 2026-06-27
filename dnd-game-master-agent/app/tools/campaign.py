@@ -1,7 +1,26 @@
 import datetime
 from typing import Dict, List, Optional
+from pydantic import BaseModel, Field
 
 from app.db import get_campaigns_col
+
+class CampaignMetadata(BaseModel):
+    """Metadata for the current scene."""
+    chapter: Optional[str] = Field(default=None, description="The current chapter of the adventure")
+    section: Optional[str] = Field(default=None, description="The current section or location name")
+    asset_urls: List[str] = Field(default_factory=list, description="URLs to any visual assets for the scene")
+
+class CharacterState(BaseModel):
+    """State of a single character in the party."""
+    hp: int = Field(description="Current hit points")
+    max_hp: int = Field(description="Maximum hit points")
+    conditions: List[str] = Field(default_factory=list, description="List of current status conditions")
+
+class PartyState(BaseModel):
+    """The state of the entire party."""
+    characters: Dict[str, CharacterState] = Field(
+        description="Dictionary mapping character names to their current state"
+    )
 
 def get_campaign(campaign_id: str, include_history: bool = False) -> Optional[Dict]:
     """Fetch the campaign document from MongoDB.
@@ -32,9 +51,9 @@ def update_campaign(
     progress: Optional[float] = None,
     scene: Optional[str] = None,
     description: Optional[str] = None,
-    metadata: Optional[dict] = None,
+    metadata: Optional[CampaignMetadata] = None,
     initiative: Optional[List[str]] = None,
-    party: Optional[dict] = None
+    party: Optional[PartyState] = None
 ) -> Dict:
     """Update campaign properties or append a new turn state to the campaign.
     
@@ -45,9 +64,9 @@ def update_campaign(
         progress: Optional completion percentage (0-100).
         scene: Title of the current scene. (Requires description, metadata, initiative, and party to append a turn)
         description: Natural language description of the current situation.
-        metadata: e.g. {"chapter": "...", "section": "...", "asset_urls": []}
+        metadata: CampaignMetadata object containing chapter, section, and asset_urls.
         initiative: Ordered list of characters in initiative order.
-        party: Party state e.g. {"characters": {"Name": {"hp": 10, "max_hp": 10, "conditions": []}}}
+        party: PartyState object mapping character names to their hp, max_hp, and conditions.
         
     Returns:
         The updated campaign document.
@@ -77,9 +96,9 @@ def update_campaign(
         new_snapshot = {
             "scene": scene,
             "description": description,
-            "metadata": metadata,
+            "metadata": metadata.model_dump() if hasattr(metadata, "model_dump") else metadata,
             "initiative": initiative,
-            "party": party,
+            "party": party.model_dump() if hasattr(party, "model_dump") else party,
             "created_dt": now
         }
         update_ops["$push"] = {"state": new_snapshot}
