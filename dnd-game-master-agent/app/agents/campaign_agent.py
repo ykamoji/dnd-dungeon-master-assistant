@@ -9,7 +9,6 @@ from app.agents.config import MODEL
 from app.agents.callbacks import make_track_agent_callback, track_tool_callback
 from app.agents.story_agent import story_tool
 from app.tools.campaign import get_campaign
-from app.tools.assets import get_asset_url
 
 campaign_executor = Agent(
     name="campaign_executor",
@@ -22,19 +21,18 @@ campaign_executor = Agent(
     
     Your job:
     1. Use get_campaign to load the current campaign state
-    2. Use story_agent to retrieve relevant chapter/scene content
-    3. Use get_asset_url to find images for the current scene
-    4. Provide:
+    2. Use story_agent to retrieve relevant chapter/scene content and asset URLs
+    3. Provide:
+       - The Chapter and Section name (retrieved from story_agent)
        - A summary of the current scene and situation
        - GM notes (key NPCs present, threats, opportunities)
        - 2-3 suggested next scenes or directions
-       - Any relevant asset URLs for the UI
-    5. Suggest 2-3 next actions for the player
+       - Any relevant asset URLs for the UI (retrieved from story_agent)
+    4. Suggest 2-3 next actions for the player
     
     Be concise but thorough. Include asset URLs when available.""",
     tools=[
         FunctionTool(get_campaign),
-        FunctionTool(get_asset_url),
         story_tool,
     ],
     output_key="campaign_draft",

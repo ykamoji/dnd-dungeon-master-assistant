@@ -38,7 +38,7 @@ def session_service():
 # RESOURCE_EXHAUSTED. A single test stays under the cap, so we sleep before each
 # test (except the first) long enough that the previous test's calls fully age
 # out of the rolling 60-second window before the next burst starts.
-_RATE_LIMIT_SLEEP_SECONDS = 30
+_RATE_LIMIT_SLEEP_SECONDS = 5
 _agent_tests_run = 0
 
 

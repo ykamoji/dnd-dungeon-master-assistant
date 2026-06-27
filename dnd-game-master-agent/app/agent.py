@@ -56,7 +56,7 @@ from app.agents.campaign_agent import campaign_agent
 from app.agents.output_agent import output_agent
 
 _HITL_INTERRUPT_ID = "hitl_approval"
-_APPROVE_WORDS = {"", "ok", "okay", "approve", "approved", "yes", "y"}
+_APPROVE_WORDS = {"ok", "yes", "y", "approve", "accept", "sure", "fine", "looks good"}
 _RESULT_KEY = {
     "ACTION": "action_result",
     "NPC_DIALOGUE": "npc_result",
@@ -85,10 +85,12 @@ def prepare(ctx: Context, node_input: Any) -> Event:
     the input guardrail. Routes "safe" or "blocked"."""
     text = _text_of(node_input)
     is_safe, reason, refusal = evaluate_input_safety(text)
+    turn = ctx.state.get("turn_count", 0) + 1
     return Event(
         output=text,
         route="safe" if is_safe else "blocked",
         state={
+            "turn_count": turn,
             "last_agent": [],
             "tools_fired": [],
             "intent": "",
@@ -98,7 +100,7 @@ def prepare(ctx: Context, node_input: Any) -> Event:
             "is_safe": is_safe,
             "rejection_reason": reason,
             "rejection_message": refusal,
-            "campaign_id": ctx.state.get("campaign_id") or "default-campaign",
+            "campaign_id": ctx.session.id,
             # Pre-seed result keys so output_agent's template always resolves.
             "action_result": "",
             "npc_result": "",
@@ -154,7 +156,10 @@ async def hitl_gate(ctx: Context, node_input: Any):
         yield Event(output="")
         return
 
-    if not ctx.resume_inputs or _HITL_INTERRUPT_ID not in ctx.resume_inputs:
+    turn = ctx.state.get("turn_count", 1)
+    interrupt_id = f"hitl_approval_{turn}"
+
+    if not ctx.resume_inputs or interrupt_id not in ctx.resume_inputs:
         preview = (
             f"**[{intent} Draft]**\n\n{draft}\n\n---\n"
             "*Type 'ok' to approve, or anything else to cancel this turn.*"
@@ -163,12 +168,12 @@ async def hitl_gate(ctx: Context, node_input: Any):
             content=types.Content(role="model", parts=[types.Part.from_text(text=preview)])
         )
         yield RequestInput(
-            interrupt_id=_HITL_INTERRUPT_ID,
+            interrupt_id=interrupt_id,
             message="Approve this response? Type 'ok' to confirm.",
         )
         return
 
-    answer = ctx.resume_inputs[_HITL_INTERRUPT_ID]
+    answer = ctx.resume_inputs[interrupt_id]
     if isinstance(answer, dict):
         answer = answer.get("response") or answer.get("result") or ""
     rejected = str(answer).strip().lower() not in _APPROVE_WORDS

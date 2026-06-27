@@ -49,11 +49,11 @@ def update_campaign(
     campaign_name: str = "tomb-of-annihilation",
     summary: Optional[str] = None,
     progress: Optional[float] = None,
-    scene: Optional[str] = None,
-    description: Optional[str] = None,
+    scene: Optional[str] = Field(default=None, description="A short, evocative title or summary of the current location and situation (e.g., 'The Gates of Chult')"),
+    description: Optional[str] = Field(default=None, description="A rich, detailed narrative description of the current events, objectives, and environment, written like a true D&D Game Master"),
     metadata: Optional[CampaignMetadata] = None,
     initiative: Optional[List[str]] = None,
-    party: Optional[PartyState] = None
+    party: Optional[PartyState] = None,
 ) -> Dict:
     """Update campaign properties or append a new turn state to the campaign.
     
@@ -91,14 +91,27 @@ def update_campaign(
     if progress is not None:
         update_ops["$set"]["progress"] = progress
         
-    has_state_update = all(x is not None for x in [scene, description, metadata, initiative, party])
-    if has_state_update:
+    # A turn snapshot is persisted whenever any state field is supplied. Fields
+    # not supplied this turn are carried forward from the latest stored snapshot,
+    # so a partial update (e.g. only party HP) never blanks out the scene,
+    # initiative, or other fields that simply didn't change.
+    snapshot_fields = [scene, description, metadata, initiative, party]
+    if any(x is not None for x in snapshot_fields):
+        existing = col.find_one(
+            {"campaign_id": campaign_id}, {"_id": 0, "state": {"$slice": -1}}
+        )
+        prior_state = (existing or {}).get("state") or []
+        last = prior_state[-1] if prior_state else {}
+
+        def _dump(value):
+            return value.model_dump() if hasattr(value, "model_dump") else value
+
         new_snapshot = {
-            "scene": scene,
-            "description": description,
-            "metadata": metadata.model_dump() if hasattr(metadata, "model_dump") else metadata,
-            "initiative": initiative,
-            "party": party.model_dump() if hasattr(party, "model_dump") else party,
+            "scene": scene if scene is not None else last.get("scene"),
+            "description": description if description is not None else last.get("description"),
+            "metadata": _dump(metadata) if metadata is not None else last.get("metadata"),
+            "initiative": initiative if initiative is not None else last.get("initiative"),
+            "party": _dump(party) if party is not None else last.get("party"),
             "created_dt": now
         }
         update_ops["$push"] = {"state": new_snapshot}

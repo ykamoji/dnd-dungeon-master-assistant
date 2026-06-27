@@ -49,10 +49,10 @@ classifier = Agent(
     Labels:
     - ACTION — combat, skill checks, movement, using items, casting spells, anything
       that changes game state.
-    - NPC_DIALOGUE — talking to NPCs, asking NPCs questions, social interactions,
-      persuasion or intimidation involving an NPC.
-    - CAMPAIGN — asking about the current scene, requesting a summary, what's next,
-      party status, GM notes, or world-building questions.
+    - NPC_DIALOGUE — talking to NPCs, asking NPCs questions, asking what an NPC says,
+      listening to NPCs, social interactions, persuasion or intimidation.
+    - CAMPAIGN — asking the GM about the state of the world, requesting a scene summary, 
+      what's next, party status, GM notes (but NOT interacting with or listening to NPCs).
 
     Player message: {last_player_action}
 

@@ -1,24 +1,19 @@
 from google.adk.agents import Agent
 
-from google.adk.tools import FunctionTool
-
-from app.agents.config import MODEL
+from app.agents.config import MODEL, USE_LOCAL_LLM
 from app.agents.schemas import GMResponse
-from app.agents.callbacks import make_track_agent_callback
-from app.tools.campaign import update_campaign
+from app.agents.callbacks import make_track_agent_callback, persist_campaign_callback
 
 output_agent = Agent(
     name="output_agent",
     model=MODEL,
-    instruction="""You are the D&D Game Master Output Formatter and State Updater.
+    instruction="""You are the D&D Game Master Output Formatter.
 
-    Your ONLY job is to format the specialist agent's output into a JSON object 
-    and persist the latest state to MongoDB.
+    Your ONLY job is to format the specialist agent's output into a JSON object
+    matching the GMResponse schema below. Persisting the result to the database
+    happens automatically after you respond — you do not call any tools.
 
-    Step 1. Call the `update_campaign` tool with the details matching the MongoDB 
-    fields (scene, description, progress, party, initiative, metadata) extracted 
-    from the specialist result.
-    Step 2. Return ONLY a raw JSON object matching the GMResponse schema below.
+    Return ONLY a raw JSON object matching the GMResponse schema below.
 
     Intent: {intent}
     Action Result: {action_result}
@@ -35,12 +30,17 @@ output_agent = Agent(
         "math_breakdown": "string",
         "npc_name": "string",
         "dialogue": [{"speaker": "str", "text": "str", "emotion": "str"}],
+        "chapter": "string",
+        "section": "string",
         "scene_summary": "string",
         "gm_notes": "string",
         "next_scene_suggestions": ["str"],
         "asset_urls": ["str"],
         "suggested_actions": ["str"],
         "requires_roll": true/false,
+        "progress": 0-100,
+        "initiative": ["CharacterName", ...],
+        "party": [{"name": "str", "hp": int, "max_hp": int, "conditions": ["str"]}],
         "last_agent": ["str"],
         "tools_fired": ["str"]
     }
@@ -48,14 +48,26 @@ output_agent = Agent(
     Rules:
     - For ACTION intent: fill narrative, combat_log, math_breakdown, suggested_actions
     - For NPC_DIALOGUE intent: fill narrative, npc_name, dialogue, suggested_actions
-    - For CAMPAIGN intent: fill narrative, scene_summary, gm_notes, next_scene_suggestions, asset_urls
+    - For CAMPAIGN intent: fill narrative, chapter, section, scene_summary, gm_notes, next_scene_suggestions, asset_urls
     - ALWAYS include last_agent and tools_fired for observability
     - ALWAYS include suggested_actions (2-3 choices for the player)
     - Set requires_roll=true if the next suggested action likely needs a dice roll
-    
-    Do NOT add information that isn't in the specialist's output.
-    Return ONLY valid JSON (no markdown block, just the raw JSON object).""",
-    tools=[FunctionTool(update_campaign)],
+
+    Campaign state fields (progress, initiative, party) are persisted to the
+    database. They reflect the CANONICAL game state, so accuracy matters more
+    than completeness:
+    - party: list every character whose hp/conditions are known from the
+      specialist result, carrying forward unchanged characters and applying any
+      damage/healing/conditions from this turn. NEVER invent hp or max_hp you
+      were not given — omit a character entirely rather than guess.
+    - initiative: include the combat turn order only when in or entering combat.
+    - progress: set only when the campaign has measurably advanced.
+    - Leave any of these empty/null when this turn did not change them; the
+      previous value is preserved automatically.
+
+    Do NOT add information that isn't in the specialist's output.""",
+    output_schema=None if USE_LOCAL_LLM else GMResponse,
     output_key="gm_response",
     before_agent_callback=make_track_agent_callback("output_agent"),
+    after_agent_callback=persist_campaign_callback,
 )
