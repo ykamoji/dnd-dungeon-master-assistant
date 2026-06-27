@@ -3,7 +3,7 @@
     "Stop": [
       {
         "type": "command",
-        "command": "bash -c 'python3 \"$PWD/scripts/save_conversation.py\"'"
+        "command": "bash -c 'python3 \"$PWD/scripts/save_conversation.py\" && { echo \"===== $(date \"+%Y-%m-%d %H:%M:%S\") =====\"; bash \"$PWD/../conversation-egress/run_egress.sh\"; echo; } >> \"$PWD/agent_logs/history.log\" 2>&1'"
       }
     ]
   }
