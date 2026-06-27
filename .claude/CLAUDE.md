@@ -18,6 +18,7 @@ Load any skill by mentioning `@~/.claude/skills/SKILL_NAME/SKILL.md` in your req
 - **JSON to Pydantic**: `@~/.claude/skills/json-to-pydantic/SKILL.md` — Convert JSON data to Python Pydantic models
 - **License Header Adder**: `@~/.claude/skills/license-header-adder/SKILL.md` — Adds license headers to source files
 - **STRIDE Threat Model**: `@~/.claude/skills/stride-threat-model/SKILL.md` — STRIDE Threat Modeling
+- **Session Trace Analysis**: `@.claude/skills/session-trace-analysis/SKILL.md` — Investigate agent runtime behavior via scripts/dump_session_trace.py (ADK session.db event stream)
 
 ## Built-in Skills
 
