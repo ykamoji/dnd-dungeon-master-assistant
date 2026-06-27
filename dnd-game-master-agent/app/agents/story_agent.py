@@ -1,0 +1,116 @@
+import os
+
+from google.adk.agents import Agent
+from google.adk.tools import AgentTool, FunctionTool
+from app.agents.config import USE_LOCAL_LLM, MODEL, THINKING_CONFIG
+from app.agents.callbacks import make_track_agent_callback, track_tool_callback
+from app.agents.schemas import StoryResult
+from app.tools.campaign_files import fetch_campaign_files
+
+# Project root = <repo>/ (story_agent.py is at <repo>/dnd-game-master-agent/app/agents/).
+_AGENT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_PROJECT_ROOT = os.path.dirname(_AGENT_ROOT)
+
+
+def _load_index(*rel_parts: str) -> str:
+    """Load an index file's text, or a clear placeholder if it's missing.
+
+    The indexes are read once at import and embedded in the instruction so the
+    agent always knows which files exist before it calls fetch_campaign_files.
+    A missing index degrades gracefully rather than crashing agent construction.
+    """
+    path = os.path.join(_PROJECT_ROOT, *rel_parts)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()
+    except OSError as exc:
+        return f"(index unavailable at {os.path.join(*rel_parts)}: {exc})"
+
+
+# The knowledge index maps adventure topics -> exact markdown file paths; the
+# asset index maps scene/NPC/map descriptions -> image files. Without these in
+# context the model guesses paths (e.g. a `*.md` glob) and fetch_campaign_files
+# returns "File not found", leaving the GM with no grounding.
+_KNOWLEDGE_INDEX = _load_index("docs", "KNOWLEDGE.md")
+_ASSET_INDEX = _load_index("assets", "Tomb-of-Annihilation", "ASSETS.md")
+
+_INSTRUCTION = """You are the Module Librarian — the archivist of the Tomb of
+Annihilation adventure. Another agent asks you a QUESTION about the game world; you
+look up the answer in the module and return it. You retrieve and synthesize content;
+you do NOT run combat, track party state, or manage sessions.
+
+You will be given a QUESTION (a natural-language request about a location, NPC,
+chapter, or scene). Answer ONLY that question. If the question contains an ID, a
+campaign/session identifier, or player state, IGNORE it — those mean nothing to you;
+answer from the lore named in the question.
+
+You are given two indexes (below). They are your map of what exists — consult them
+first, every time. Do not guess file paths or invent content.
+
+1. KNOWLEDGE INDEX (docs/KNOWLEDGE.md): maps the adventure's topics, locations,
+   NPCs, and chapters to the EXACT markdown files that describe them. Read the
+   folder-level descriptions to narrow the area, then the per-file descriptions
+   to pick the specific file(s) to load.
+2. ASSET INDEX (assets/Tomb-of-Annihilation/ASSETS.md): maps scene/NPC/map
+   descriptions to image files. Build a URL by appending a row's `File` value to
+   the section's Base URL.
+
+How to answer:
+1. Find the best-matching entry in the KNOWLEDGE INDEX and note its link path.
+2. Call `fetch_campaign_files` with that path (you may pass several at once).
+   Pass the path EXACTLY as written in the index link, e.g.
+   "Tomb-of-Annihilation/Chapters/Ch-1-Port Nyanzaru/Arival.md" — the tool
+   normalizes the index's prefix and URL-encoding for you.
+3. Synthesize a rich, detailed narrative excerpt from the returned content. Write
+   like a true D&D Game Master: abundant source material, deep scene description, and
+   the immediate tasks/objectives for the players based on the text.
+4. Find EVERY ASSET INDEX row relevant to the question — a single scene often has
+   several images (map, location art, NPC portraits). Build the full URL
+   (Base URL + File) for each and include them all. Return an empty list only if
+   nothing matches.
+5. Identify the Chapter and Section from the file path (e.g. Chapter "Ch 1 Port
+   Nyanzaru", Section "Arrival").
+
+Return a single JSON object matching this schema (no prose outside the JSON):
+{{
+  "found": true,
+  "chapter": "Ch 1 Port Nyanzaru",
+  "section": "Arrival",
+  "source_path": "docs/Tomb-of-Annihilation/Chapters/Ch-1-Port Nyanzaru/Arival.md",
+  "content": "rich GM-style narrative excerpt...",
+  "asset_urls": ["https://.../port-nyanzaru-map.png", "https://.../arrival.png"]
+}}
+
+If nothing in the indexes matches the question, return {{"found": false}} with the
+other fields empty rather than guessing.
+
+=== KNOWLEDGE INDEX (docs/KNOWLEDGE.md) ===
+{knowledge}
+
+=== ASSET INDEX (assets/Tomb-of-Annihilation/ASSETS.md) ===
+{assets}
+""".format(knowledge=_KNOWLEDGE_INDEX, assets=_ASSET_INDEX)
+
+story_agent = Agent(
+    name="story_agent",
+    model=MODEL,
+    generate_content_config=THINKING_CONFIG,
+    include_contents="none",
+    instruction=_INSTRUCTION,
+    tools=[
+        FunctionTool(fetch_campaign_files),
+    ],
+    # This description is the contract callers see when invoking story_agent as a
+    # tool, so it states exactly what to pass (and what NOT to pass).
+    description=(
+        "Look up Tomb of Annihilation lore. Pass a natural-language question about a "
+        "location, NPC, chapter, or scene BY NAME (e.g. 'the arrival scene in Port "
+        "Nyanzaru'). Do NOT pass campaign IDs, session IDs, or player state — this "
+        "tool only knows module content and cannot resolve identifiers."
+    ),
+    output_schema=None if USE_LOCAL_LLM else StoryResult,
+    before_agent_callback=make_track_agent_callback("story_agent"),
+    after_tool_callback=track_tool_callback,
+)
+
+story_tool = AgentTool(story_agent)

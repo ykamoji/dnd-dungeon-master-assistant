@@ -18,18 +18,26 @@ Exposes the agent's graph workflow via HTTP endpoints for interaction and playgr
 
 import os
 
-import google.auth
 from fastapi import FastAPI
 from google.adk.cli.fast_api import get_fast_api_app
-from google.cloud import logging as google_cloud_logging
 
 from app.app_utils.telemetry import setup_telemetry
 from app.app_utils.typing import Feedback
 
 setup_telemetry()
-_, project_id = google.auth.default()
-logging_client = google_cloud_logging.Client()
-logger = logging_client.logger(__name__)
+
+
+try:
+    import google.auth
+    from google.cloud import logging as google_cloud_logging
+    _, project_id = google.auth.default()
+    logging_client = google_cloud_logging.Client()
+    logger = logging_client.logger(__name__)
+except Exception as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+    logger.warning("GCP authentication failed. Falling back to local logging.")
 allow_origins = (
     os.getenv("ALLOW_ORIGINS", "").split(",") if os.getenv("ALLOW_ORIGINS") else None
 )
@@ -49,11 +57,19 @@ app: FastAPI = get_fast_api_app(
     artifact_service_uri=artifact_service_uri,
     allow_origins=allow_origins,
     session_service_uri=session_service_uri,
-    otel_to_cloud=True,
+    otel_to_cloud=False,
 )
 app.title = "dnd-game-master-agent"
 app.description = "API for interacting with the Agent dnd-game-master-agent"
 
+from app.custom import router as custom_router
+from app.db import close_client
+
+app.include_router(custom_router)
+
+@app.on_event("shutdown")
+def shutdown_event():
+    close_client()
 
 @app.post("/feedback")
 def collect_feedback(feedback: Feedback) -> dict[str, str]:

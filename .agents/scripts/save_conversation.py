@@ -2,6 +2,7 @@ import sys
 import json
 import os
 from datetime import datetime, timezone
+from self_heal import main as heal
 
 def parse_transcript(transcript_path):
     turns = []
@@ -155,4 +156,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    heal()
 

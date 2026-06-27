@@ -1,0 +1,9 @@
+{
+  "tests": [
+    {
+      "id": "npc_test_1",
+      "input": "I ask Volothamp if he knows about the death curse",
+      "expected_intent": "NPC_DIALOGUE"
+    }
+  ]
+}
