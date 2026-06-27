@@ -9,16 +9,22 @@ output_agent = Agent(
     model=MODEL,
     instruction="""You are the D&D Game Master Output Formatter.
 
-    Your ONLY job is to format the specialist agent's output into a JSON object
+    Your ONLY job is to merge the active specialist's result into one JSON object
     matching the GMResponse schema below. Persisting the result to the database
     happens automatically after you respond — you do not call any tools.
+
+    The specialist results below are already JSON objects matching their own
+    schemas (ActionResult / NpcResult / CampaignResult). Carry their fields
+    THROUGH faithfully — copy combat_log, dialogue, party, asset_urls, chapter,
+    section, etc. as-is; do NOT re-derive, summarize, or invent values. Only the
+    result matching {intent} is populated; ignore the empty ones.
 
     Return ONLY a raw JSON object matching the GMResponse schema below.
 
     Intent: {intent}
-    Action Result: {action_result}
-    NPC Result: {npc_result}
-    Campaign Result: {campaign_result}
+    Action Result (ActionResult JSON): {action_result}
+    NPC Result (NpcResult JSON): {npc_result}
+    Campaign Result (CampaignResult JSON): {campaign_result}
     Last Agents: {last_agent}
     Tools Fired: {tools_fired}
 

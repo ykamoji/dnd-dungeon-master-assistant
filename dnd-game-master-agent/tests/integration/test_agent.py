@@ -94,9 +94,25 @@ async def test_campaign_flow_end_to_end() -> None:
         )],
     )
 
-    # Keep the MongoDB-backed campaign tools hermetic (no real DB access).
+    # Keep the MongoDB-backed campaign tools hermetic (no real DB access). Seed a
+    # concrete starting scene so get_campaign returns real grounding — asking the
+    # specialist to "summarize the current scene" with NO scene present is not a
+    # meaningful success case (the model rightly asks which scene), so the gate
+    # would never fire. A real campaign always has a current scene to summarize.
+    seeded_campaign = {
+        "campaign_id": "itest-campaign",
+        "campaign_name": "tomb-of-annihilation",
+        "state": [{
+            "scene": "Port Nyanzaru — Arrival",
+            "description": "Your ship docks at the bustling harbor of Port Nyanzaru "
+                           "under a blazing sun.",
+            "metadata": {"chapter": "Ch 1 Port Nyanzaru", "section": "Arrival", "asset_urls": []},
+            "initiative": [],
+            "party": {"characters": {"Hero": {"hp": 10, "max_hp": 10, "conditions": []}}},
+        }],
+    }
     mock_col = MagicMock()
-    mock_col.find_one.return_value = None
+    mock_col.find_one.return_value = seeded_campaign
     mock_col.update_one.return_value = None
 
     with patch("app.tools.campaign.get_campaigns_col", return_value=mock_col):

@@ -7,6 +7,7 @@ from google.adk.models.llm_request import LlmRequest
 from google.adk.models.llm_response import LlmResponse
 from google.adk.tools import BaseTool, ToolContext
 from google.genai import types
+from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -127,8 +128,8 @@ async def track_tool_callback(
 _JSON_FENCE_RE = re.compile(r"^\s*```(?:json)?\s*|\s*```\s*$", re.IGNORECASE)
 
 
-def _parse_gm_response(raw: object) -> dict:
-    """Best-effort parse of the output_agent's gm_response into a dict.
+def _parse_json(raw: object) -> dict:
+    """Best-effort parse of a model's text output into a dict.
 
     Tolerates markdown code fences and leading/trailing prose by stripping the
     fence and, as a last resort, slicing from the first '{' to the last '}'.
@@ -153,6 +154,41 @@ def _parse_gm_response(raw: object) -> dict:
         except (json.JSONDecodeError, ValueError):
             pass
     return {}
+
+
+# Backwards-compatible alias: the output_agent persistence path parses gm_response.
+def _parse_gm_response(raw: object) -> dict:
+    """Tolerant parse of the output_agent's gm_response (see _parse_json)."""
+    return _parse_json(raw)
+
+
+def validate_draft(raw: object, schema) -> tuple[Optional[str], str]:
+    """Validate a specialist draft against its Pydantic schema.
+
+    Tolerantly parses `raw` (model text, possibly fenced) and validates it
+    against `schema`. On success returns (normalized_json_str, ""); on failure
+    returns (None, error_message). The normalized JSON string is what the
+    checker stores into state so the output_agent always receives clean,
+    schema-conformant JSON regardless of how the model fenced its reply.
+    """
+    if not raw or not str(raw).strip():
+        return None, "Response is empty — the request was not resolved."
+
+    parsed = _parse_json(raw)
+    if not parsed:
+        return None, "Output was not valid JSON matching the required schema."
+
+    try:
+        model = schema.model_validate(parsed)
+    except ValidationError as exc:
+        # Compact the pydantic errors into a single actionable line for the LLM.
+        problems = "; ".join(
+            f"{'.'.join(str(p) for p in e['loc']) or '(root)'}: {e['msg']}"
+            for e in exc.errors()
+        )
+        return None, f"Output did not match the {schema.__name__} schema: {problems}"
+
+    return model.model_dump_json(), ""
 
 
 def _build_party_state(party_list: list, PartyState, CharacterState):
@@ -180,6 +216,32 @@ def _build_party_state(party_list: list, PartyState, CharacterState):
     return PartyState(characters=characters) if characters else None
 
 
+def _build_dialogue(dialogue_list: list, DialogueLine):
+    """Convert GMResponse.dialogue (list of {speaker, text, emotion}) into a list of
+    DialogueLine, or None if absent/malformed.
+
+    Returning None (rather than an empty list) lets the persistence layer carry the
+    previous turn's dialogue forward, so a turn that has no dialogue never wipes it.
+    """
+    if not dialogue_list:
+        return None
+    lines = []
+    for entry in dialogue_list:
+        if not isinstance(entry, dict):
+            logger.warning(
+                "persist_campaign_callback: skipping malformed dialogue line: %r", entry
+            )
+            continue
+        lines.append(
+            DialogueLine(
+                speaker=entry.get("speaker", ""),
+                text=entry.get("text", ""),
+                emotion=entry.get("emotion", ""),
+            )
+        )
+    return lines or None
+
+
 async def persist_campaign_callback(callback_context: CallbackContext) -> None:
     """After-agent callback for output_agent: deterministically persist state.
 
@@ -195,6 +257,7 @@ async def persist_campaign_callback(callback_context: CallbackContext) -> None:
         CampaignMetadata,
         PartyState,
         CharacterState,
+        DialogueLine,
     )
 
     if callback_context.state.get("player_rejected"):
@@ -214,11 +277,21 @@ async def persist_campaign_callback(callback_context: CallbackContext) -> None:
     description = resp.get("narrative") or None
     progress = resp.get("progress")  # may be None == "unchanged"
 
-    # asset_urls -> scene metadata
+    # chapter/section/asset_urls + the GM-facing extras all live in scene metadata.
     chapter = resp.get("chapter") or None
     section = resp.get("section") or None
     asset_urls = resp.get("asset_urls") or []
-    metadata = CampaignMetadata(chapter=chapter, section=section, asset_urls=asset_urls) if (chapter or section or asset_urls) else None
+    gm_notes = resp.get("gm_notes") or None
+    next_scene_suggestions = resp.get("next_scene_suggestions") or []
+    suggested_actions = resp.get("suggested_actions") or []
+    metadata = CampaignMetadata(
+        chapter=chapter,
+        section=section,
+        asset_urls=asset_urls,
+        gm_notes=gm_notes,
+        next_scene_suggestions=next_scene_suggestions,
+        suggested_actions=suggested_actions,
+    ) if (chapter or section or asset_urls or gm_notes or next_scene_suggestions or suggested_actions) else None
 
     # initiative: empty list means "unchanged" -> pass None so the tool carries
     # the previous order forward instead of clobbering it.
@@ -226,6 +299,11 @@ async def persist_campaign_callback(callback_context: CallbackContext) -> None:
 
     # party: list[{name, hp, max_hp, conditions}] -> PartyState keyed by name.
     party = _build_party_state(resp.get("party") or [], PartyState, CharacterState)
+
+    # NPC_DIALOGUE fields: persist the speaker, the turn narrative, and the lines.
+    npc_name = resp.get("npc_name") or None
+    narrative = resp.get("narrative") or None
+    dialogue = _build_dialogue(resp.get("dialogue") or [], DialogueLine)
 
     try:
         update_campaign(
@@ -237,6 +315,9 @@ async def persist_campaign_callback(callback_context: CallbackContext) -> None:
             metadata=metadata,
             initiative=initiative,
             party=party,
+            npc_name=npc_name,
+            narrative=narrative,
+            dialogue=dialogue,
         )
     except Exception:  # pragma: no cover - persistence must never break the turn
         logger.exception("persist_campaign_callback: update_campaign failed")

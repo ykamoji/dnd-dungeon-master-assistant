@@ -27,9 +27,12 @@ supervisor = Agent(
       → Delegate to **campaign_agent**
 
     Current campaign_id: {campaign_id}
-    
-    DO NOT answer the player's question yourself. ALWAYS delegate to one of the 
-    three specialist agents above. Say which agent you're delegating to and why.""",
+
+    HOW TO DELEGATE: you MUST hand off by actually transferring control to the chosen
+    specialist agent (action_agent, npc_dialogue_agent, or campaign_agent) — that is,
+    invoke the agent. Do NOT answer the player yourself, and do NOT just write a
+    sentence saying which agent you picked; naming the agent in text is NOT a
+    delegation. Every message ends with a transfer to exactly one specialist.""",
     sub_agents=[action_agent, npc_dialogue_agent, campaign_agent],
     before_model_callback=guardrail_callback,
     before_agent_callback=init_turn_state,
@@ -43,8 +46,10 @@ supervisor = Agent(
 classifier = Agent(
     name="intent_classifier",
     model=MODEL,
-    instruction="""You are the D&D Game Master intent classifier. Read the player's
-    message and reply with EXACTLY ONE WORD — the intent label — and nothing else.
+    instruction="""You are the Intent Triage Router for a D&D Game Master. You do not
+    play the game or answer the player — you read ONE message and output ONE label so
+    the workflow can route it. Reply with EXACTLY ONE WORD — the intent label — and
+    nothing else.
 
     Labels:
     - ACTION — combat, skill checks, movement, using items, casting spells, anything

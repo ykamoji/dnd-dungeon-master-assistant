@@ -14,6 +14,7 @@ from app.agents.campaign_agent import campaign_agent
 from app.agents.supervisor_agent import supervisor
 from app.agents.story_agent import story_agent
 from app.agents.output_agent import output_agent
+from app.agents.schemas import ActionResult, NpcResult, CampaignResult
 
 # Load datasets
 DATASETS_DIR = os.path.join(os.path.dirname(__file__), "datasets")
@@ -106,6 +107,9 @@ async def test_action_agent(case, session_service):
     if not session.state.get("eval_feedback"):
         assert "action_result" in session.state
         assert session.state["intent"] == "ACTION"
+        # The checker stores schema-normalized JSON, so the result must parse
+        # back into ActionResult (the contract output_agent now relies on).
+        ActionResult.model_validate_json(session.state["action_result"])
     else:
         assert "Rejected" in session.state["eval_feedback"]
 
@@ -135,6 +139,7 @@ async def test_npc_dialogue_agent(case, session_service):
     if not session.state.get("eval_feedback"):
         assert "npc_result" in session.state
         assert session.state["intent"] == "NPC_DIALOGUE"
+        NpcResult.model_validate_json(session.state["npc_result"])
     else:
         assert "Rejected" in session.state["eval_feedback"]
 
@@ -164,6 +169,7 @@ async def test_campaign_agent(case, session_service):
     if not session.state.get("eval_feedback"):
         assert "campaign_result" in session.state
         assert session.state["intent"] == "CAMPAIGN"
+        CampaignResult.model_validate_json(session.state["campaign_result"])
     else:
         assert "Rejected" in session.state["eval_feedback"]
 
@@ -245,13 +251,21 @@ async def test_story_agent(session_service):
 async def test_output_agent(session_service):
     """Output agent formats a specialist result into the GMResponse schema."""
     session_id = "test_output_1"
-    initial_state = {
-        "campaign_id": session_id,
-        "intent": "ACTION",
-        "action_result": (
+    # action_result is now a typed ActionResult JSON string (what the checker
+    # stores), matching the contract output_agent consumes.
+    action_result = ActionResult(
+        narrative=(
             "You strike the goblin with your longsword for 9 slashing damage "
             "(1d8+3), dropping it. The path ahead is now clear."
         ),
+        math_breakdown="Attack 1d20+5 = 19 vs AC 15 → hit; damage 1d8+3 = 9",
+        requires_roll=False,
+        suggested_actions=["Advance down the path", "Search the goblin", "Listen for more enemies"],
+    ).model_dump_json()
+    initial_state = {
+        "campaign_id": session_id,
+        "intent": "ACTION",
+        "action_result": action_result,
         "npc_result": "",
         "campaign_result": "",
         "last_agent": ["action_executor", "action_checker"],

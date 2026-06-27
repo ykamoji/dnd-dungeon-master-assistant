@@ -100,7 +100,14 @@ def prepare(ctx: Context, node_input: Any) -> Event:
             "is_safe": is_safe,
             "rejection_reason": reason,
             "rejection_message": refusal,
-            "campaign_id": ctx.session.id,
+            # Prefer an already-set campaign_id (carried in state), then fall back to
+            # the session id, then the canonical default used elsewhere
+            # (init_turn_state in callbacks.py).
+            "campaign_id": (
+                ctx.state.get("campaign_id")
+                or getattr(getattr(ctx, "session", None), "id", None)
+                or "default-campaign"
+            ),
             # Pre-seed result keys so output_agent's template always resolves.
             "action_result": "",
             "npc_result": "",
