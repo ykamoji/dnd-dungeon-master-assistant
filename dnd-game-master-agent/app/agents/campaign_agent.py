@@ -5,7 +5,7 @@ from google.adk.events import Event, EventActions
 from google.adk.tools import FunctionTool
 from google.genai import types
 
-from app.agents.config import MODEL, USE_LOCAL_LLM
+from app.agents.config import USE_LOCAL_LLM, MODEL, THINKING_CONFIG
 from app.agents.callbacks import (
     make_track_agent_callback,
     track_tool_callback,
@@ -18,9 +18,14 @@ from app.tools.campaign import get_campaign
 campaign_executor = Agent(
     name="campaign_executor",
     model=MODEL,
+    generate_content_config=THINKING_CONFIG,
+    include_contents="none",
     instruction="""You are the Lorekeeper & Scene Director — the keeper of the
     Tomb-of-Annihilation world state who frames each scene for the table and points
     the players toward what comes next.
+
+    Latest Campaign State:
+    {campaign_state}
 
     Player's action: {last_player_action}
     Campaign ID: {campaign_id}

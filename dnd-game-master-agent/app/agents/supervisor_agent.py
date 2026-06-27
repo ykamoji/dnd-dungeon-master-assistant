@@ -1,6 +1,6 @@
 from google.adk.agents import Agent
 
-from app.agents.config import MODEL
+from app.agents.config import MODEL, THINKING_CONFIG
 from app.agents.callbacks import guardrail_callback, init_turn_state, track_tool_callback
 from app.agents.action_agent import action_agent
 from app.agents.npc_dialogue_agent import npc_dialogue_agent
@@ -9,6 +9,8 @@ from app.agents.campaign_agent import campaign_agent
 supervisor = Agent(
     name="supervisor",
     model=MODEL,
+    generate_content_config=THINKING_CONFIG,
+    include_contents="none",
     instruction="""You are the D&D Game Master Supervisor. Your ONLY job is to 
     classify the player's input and delegate to the right specialist agent.
 
@@ -46,6 +48,7 @@ supervisor = Agent(
 classifier = Agent(
     name="intent_classifier",
     model=MODEL,
+    generate_content_config=THINKING_CONFIG,
     instruction="""You are the Intent Triage Router for a D&D Game Master. You do not
     play the game or answer the player — you read ONE message and output ONE label so
     the workflow can route it. Reply with EXACTLY ONE WORD — the intent label — and

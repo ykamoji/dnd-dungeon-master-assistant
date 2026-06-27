@@ -47,6 +47,9 @@ from google.adk.events.event import Event
 from google.adk.events.request_input import RequestInput
 from google.adk.workflow import Workflow, node
 from google.genai import types
+import json
+
+from app.tools.campaign import get_campaign
 
 from app.agents.callbacks import evaluate_input_safety
 from app.agents.supervisor_agent import classifier
@@ -86,6 +89,15 @@ def prepare(ctx: Context, node_input: Any) -> Event:
     text = _text_of(node_input)
     is_safe, reason, refusal = evaluate_input_safety(text)
     turn = ctx.state.get("turn_count", 0) + 1
+    campaign_id = (
+        ctx.state.get("campaign_id")
+        or getattr(getattr(ctx, "session", None), "id", None)
+        or "default-campaign"
+    )
+
+    campaign_data = get_campaign(campaign_id, include_history=False)
+    campaign_state = json.dumps(campaign_data, default=str) if campaign_data else "No campaign data found."
+
     return Event(
         output=text,
         route="safe" if is_safe else "blocked",
@@ -100,14 +112,8 @@ def prepare(ctx: Context, node_input: Any) -> Event:
             "is_safe": is_safe,
             "rejection_reason": reason,
             "rejection_message": refusal,
-            # Prefer an already-set campaign_id (carried in state), then fall back to
-            # the session id, then the canonical default used elsewhere
-            # (init_turn_state in callbacks.py).
-            "campaign_id": (
-                ctx.state.get("campaign_id")
-                or getattr(getattr(ctx, "session", None), "id", None)
-                or "default-campaign"
-            ),
+            "campaign_id": campaign_id,
+            "campaign_state": campaign_state,
             # Pre-seed result keys so output_agent's template always resolves.
             "action_result": "",
             "npc_result": "",

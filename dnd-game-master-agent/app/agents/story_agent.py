@@ -2,11 +2,10 @@ import os
 
 from google.adk.agents import Agent
 from google.adk.tools import AgentTool, FunctionTool
-from app.agents.config import MODEL, USE_LOCAL_LLM
+from app.agents.config import USE_LOCAL_LLM, MODEL, THINKING_CONFIG
 from app.agents.callbacks import make_track_agent_callback, track_tool_callback
 from app.agents.schemas import StoryResult
 from app.tools.campaign_files import fetch_campaign_files
-from app.tools.assets import get_asset_url
 
 # Project root = <repo>/ (story_agent.py is at <repo>/dnd-game-master-agent/app/agents/).
 _AGENT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -95,10 +94,11 @@ other fields empty rather than guessing.
 story_agent = Agent(
     name="story_agent",
     model=MODEL,
+    generate_content_config=THINKING_CONFIG,
+    include_contents="none",
     instruction=_INSTRUCTION,
     tools=[
         FunctionTool(fetch_campaign_files),
-        # FunctionTool(get_asset_url),
     ],
     # This description is the contract callers see when invoking story_agent as a
     # tool, so it states exactly what to pass (and what NOT to pass).

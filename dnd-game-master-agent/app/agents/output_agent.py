@@ -1,12 +1,14 @@
 from google.adk.agents import Agent
 
-from app.agents.config import MODEL, USE_LOCAL_LLM
+from app.agents.config import MODEL, THINKING_CONFIG, USE_LOCAL_LLM
 from app.agents.schemas import GMResponse
 from app.agents.callbacks import make_track_agent_callback, persist_campaign_callback
 
 output_agent = Agent(
     name="output_agent",
     model=MODEL,
+    generate_content_config=THINKING_CONFIG,
+    include_contents="none",
     instruction="""You are the D&D Game Master Output Formatter.
 
     Your ONLY job is to merge the active specialist's result into one JSON object
@@ -46,7 +48,7 @@ output_agent = Agent(
         "requires_roll": true/false,
         "progress": 0-100,
         "initiative": ["CharacterName", ...],
-        "party": [{"name": "str", "hp": int, "max_hp": int, "conditions": ["str"]}],
+        "party": [{"name": "str", "role": "str", "class": "str", "hp": int, "max_hp": int, "conditions": ["str"], "armors": ["str"], "spells": ["str"], "weapons": ["str"], "magicitems": ["str"]}],
         "last_agent": ["str"],
         "tools_fired": ["str"]
     }
@@ -64,8 +66,10 @@ output_agent = Agent(
     than completeness:
     - party: list every character whose hp/conditions are known from the
       specialist result, carrying forward unchanged characters and applying any
-      damage/healing/conditions from this turn. NEVER invent hp or max_hp you
-      were not given — omit a character entirely rather than guess.
+      damage/healing/conditions from this turn. Carry through each character's
+      role, class, and armors/spells/weapons/magicitems from the specialist result
+      as-is. NEVER invent hp, max_hp, role, class, or gear you were not given — omit
+      a character entirely rather than guess.
     - initiative: include the combat turn order only when in or entering combat.
     - progress: set only when the campaign has measurably advanced.
     - Leave any of these empty/null when this turn did not change them; the

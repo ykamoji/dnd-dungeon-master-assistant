@@ -5,7 +5,7 @@ from google.adk.events import Event, EventActions
 from google.adk.tools import FunctionTool
 from google.genai import types
 
-from app.agents.config import MODEL, USE_LOCAL_LLM
+from app.agents.config import USE_LOCAL_LLM, MODEL, THINKING_CONFIG
 from app.agents.callbacks import (
     make_track_agent_callback,
     track_tool_callback,
@@ -13,26 +13,33 @@ from app.agents.callbacks import (
 )
 from app.agents.schemas import ActionResult
 from app.agents.story_agent import story_tool
-from app.tools.campaign import get_campaign
+from app.tools.campaign import get_state
 from app.tools.character_lookup import lookup_character
-from app.tools.open5e_lookup import lookup_open5e
+from app.tools.open5e_lookup import lookup_character_resource
 
 action_executor = Agent(
     name="action_executor",
     model=MODEL,
+    generate_content_config=THINKING_CONFIG,
+    include_contents="none",
     instruction="""You are the Combat & Rules Arbiter — a precise, impartial D&D 5e
     referee. You resolve a player's action by the rules, show the math, and never
     fudge or invent numbers.
+
+    Latest Campaign State:
+    {campaign_state}
 
     Player's action: {last_player_action}
     Campaign ID: {campaign_id}
     Previous feedback (if retrying — fix exactly this): {eval_feedback}
 
     Procedure:
-    1. Call get_campaign (use the Campaign ID above) to load current party HP, scene,
-       and conditions.
-    2. Call lookup_character / lookup_open5e for any stat blocks you need (attacker,
-       target, spell, monster).
+    1. Call get_state (use the Campaign ID above) to load the CURRENT party HP and
+       conditions, the recent combat_log, and the current scene/chapter/location.
+       get_state is your authoritative party source — it always returns the latest
+       party even when the most recent scene turn didn't restate it.
+    2. Call lookup_character for a creature/monster/NPC stat block (attacker or target), and
+       lookup_character_resource for a spell, class, armor, weapon, or magic item.
     3. If you need module rules or scene context, call story_agent — but ask ONLY
        about game lore using location / NPC / monster / chapter names. NEVER pass the
        Campaign ID, session ID, or player HP/state; story_agent only knows
@@ -41,6 +48,13 @@ action_executor = Agent(
        damage, and conditions. Show every step of the math.
     5. Report each character's resulting HP/conditions ONLY when you actually know
        them from a tool — never invent hp or max_hp.
+    6. For each character in `party`, also report their `role` (party role, e.g. Tank,
+       Healer, Striker) and `class` (D&D class, e.g. Wizard, Fighter) from the campaign
+       state or a tool — carry these forward unchanged; do not invent them.
+    7. Track each character's loadout in `party`: their armors, spells, weapons, and
+       magicitems. Update these when this action changes them (an item is picked up,
+       consumed, equipped, a spell is learned/expended, etc.). Only list items you
+       actually know from a tool or the campaign state — never invent gear.
 
     MANDATORY TOOL USE: You do NOT know party state, stat blocks, or rules until the
     tool ACTUALLY returns them. NEVER simulate, assume, pretend, or imagine a tool
@@ -53,7 +67,7 @@ action_executor = Agent(
       "narrative": "what happened, vividly described",
       "combat_log": [{"action": "...", "target": "...", "roll": "1d20+5 = 18", "result": "Hit! 8 slashing"}],
       "math_breakdown": "AC 15 vs attack 18 → hit; damage 1d8+3 = 8",
-      "party": [{"name": "...", "hp": 0, "max_hp": 0, "conditions": ["..."]}],
+      "party": [{"name": "...", "role": "...", "class": "...", "hp": 0, "max_hp": 0, "conditions": ["..."], "armors": ["..."], "spells": ["..."], "weapons": ["..."], "magicitems": ["..."]}],
       "requires_roll": true,
       "suggested_actions": ["...", "...", "..."]
     }
@@ -66,9 +80,9 @@ action_executor = Agent(
     that text in `narrative` and leave the unknown fields at their defaults. Never
     reply with a plain-text message.""",
     tools=[
-        FunctionTool(get_campaign),
+        FunctionTool(get_state),
         FunctionTool(lookup_character),
-        FunctionTool(lookup_open5e),
+        FunctionTool(lookup_character_resource),
         story_tool,
     ],
     output_schema=None if USE_LOCAL_LLM else ActionResult,
@@ -129,5 +143,5 @@ action_agent = LoopAgent(
     name="action_agent",
     sub_agents=[action_executor, action_checker],
     max_iterations=3,
-    description="Combat and rules arbiter. Resolves player actions with D&D 5e mechanics.",
+    description="Combat and rules arbiter. Resolves player actions with D&D rules and mechanics.",
 )
