@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <defs>
+    <radialGradient id="t" cx="0.5" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#d97706" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#0c0a09"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="800" fill="#0c0a09"/>
+  <rect width="1200" height="800" fill="url(#t)"/>
+  <rect x="120" y="120" width="960" height="560" fill="none" stroke="#3b342c" stroke-width="3"/>
+  <text x="600" y="410" fill="#c8a14a" font-family="Georgia, serif" font-size="40" text-anchor="middle">Torch-lit dungeon corridor</text>
+  <text x="600" y="460" fill="#b7a888" font-family="Georgia, serif" font-size="20" text-anchor="middle">game still placeholder</text>
+</svg>

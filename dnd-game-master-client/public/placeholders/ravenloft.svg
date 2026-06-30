@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#14110f"/>
+      <stop offset="1" stop-color="#2a2520"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="800" fill="url(#g)"/>
+  <rect x="12" y="12" width="576" height="776" fill="none" stroke="#c8a14a" stroke-opacity="0.3" stroke-width="2"/>
+  <path d="M300 180 l40 70 h-80 z" fill="#7b1113" opacity="0.6"/>
+  <rect x="250" y="250" width="100" height="220" fill="#3b342c"/>
+  <text x="300" y="560" fill="#c8a14a" font-family="Georgia, serif" font-size="34" text-anchor="middle">Castle Ravenloft</text>
+  <text x="300" y="600" fill="#b7a888" font-family="Georgia, serif" font-size="18" text-anchor="middle">cover art placeholder</text>
+</svg>
