@@ -18,6 +18,7 @@ const BACKEND_PATHS = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  compress: false, // Disable compression to prevent Next.js from buffering SSE streams
   images: {
     // Cover art / stills are proxied from the 5etools mirror used by the backend.
     remotePatterns: [
@@ -33,6 +34,8 @@ const nextConfig = {
       // The ambient Pub/Sub push handler lives at the backend root ("/"), which
       // collides with the Next landing page — expose it under /ambient instead.
       { source: "/ambient", destination: `${BACKEND_ORIGIN}/` },
+      // Ambient subpaths (e.g. the session-event SSE stream) proxy as-is.
+      { source: "/ambient/:path*", destination: `${BACKEND_ORIGIN}/ambient/:path*` },
     ];
   },
 };

@@ -5,7 +5,7 @@
 // FastAPI backend by next.config.ts rewrites (no CORS). Set it to an absolute
 // origin only if you bypass the proxy.
 
-import type { Campaign, CampaignSummary, ClassProfile, RunEvent } from "./types";
+import type { Campaign, CampaignSummary, ClassProfile } from "./types";
 
 export const ROOT_API = "";
 
@@ -67,13 +67,13 @@ export function healthDb(): Promise<{ status: string }> {
 }
 
 // ---------------------------------------------------------------------------
-// ADK run lifecycle (ambient submit → poll session events → approve/reject).
+// ADK run lifecycle (ambient submit → SSE event stream → approve/reject).
 //
 // A turn is submitted through the ambient Pub/Sub handler (POST /ambient), which
 // creates/reuses the session keyed by campaign_id and runs the workflow until it
-// finishes or pauses at the HITL gate. The UI then polls the session events API
-// to render the live trace and detect the pending approval, and resolves it via
-// the built-in /run endpoint.
+// finishes or pauses at the HITL gate. The UI streams the session events over SSE
+// (sessionStreamUrl) to render the live trace + detect the pending approval, and
+// resolves it via the built-in /run endpoint.
 // ---------------------------------------------------------------------------
 
 /** Base64-encode a UTF-8 string (btoa only handles latin1). */
@@ -107,21 +107,12 @@ export async function submitTurn(args: {
 }
 
 /**
- * GET /apps/app/users/{userId}/sessions/{sessionId} — the session's event list.
- * Returns [] when the session doesn't exist yet (a brand-new campaign).
+ * The SSE URL that streams a session's events
+ * (GET /ambient/sessions/{id}/stream). The console opens an EventSource on this
+ * instead of polling — the server pushes each event once as it's written.
  */
-export async function getSessionEvents(
-  sessionId: string,
-  userId: string,
-): Promise<RunEvent[]> {
-  const res = await fetch(
-    `${ROOT_API}/apps/${APP_NAME}/users/${encodeURIComponent(
-      userId,
-    )}/sessions/${encodeURIComponent(sessionId)}`,
-  );
-  if (!res.ok) return [];
-  const data = (await res.json()) as { events?: RunEvent[] };
-  return data.events ?? [];
+export function sessionStreamUrl(sessionId: string): string {
+  return `${ROOT_API}/ambient/sessions/${encodeURIComponent(sessionId)}/stream`;
 }
 
 /**

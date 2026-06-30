@@ -134,46 +134,46 @@ export interface Campaign {
 }
 
 // ---------------------------------------------------------------------------
-// ADK run events (from the session events API / run endpoints).
-// ADK serializes with camelCase aliases (functionCall, longRunningToolIds…);
-// snake_case variants are kept as a fallback so either form parses.
+// Session events streamed from GET /ambient/sessions/{id}/stream (SSE).
+// Mirrors the backend SessionEvent pydantic model (snake_case).
 // ---------------------------------------------------------------------------
 
-interface FnPart {
-  id?: string;
-  name?: string;
-  args?: unknown;
-  response?: unknown;
+export interface SessionFunctionCall {
+  name: string;
+  args: Record<string, unknown>;
 }
 
-/** A single part of an event's content (text, function call, etc.). */
-export interface EventPart {
-  text?: string;
+export interface SessionFunctionResponse {
+  name: string;
+  response: unknown;
+}
+
+export interface SessionPart {
+  text?: any;
   thought?: boolean;
-  functionCall?: FnPart;
-  functionResponse?: FnPart;
-  function_call?: FnPart;
-  function_response?: FnPart;
+  function_call?: SessionFunctionCall;
+  function_response?: SessionFunctionResponse;
 }
 
-/** A raw ADK event from the session events API. */
-export interface RunEvent {
-  id?: string;
-  author?: string;
-  timestamp?: number;
-  content?: { role?: string; parts?: EventPart[] } | null;
-  actions?: {
-    stateDelta?: Record<string, unknown>;
-    state_delta?: Record<string, unknown>;
-  } | null;
-  longRunningToolIds?: string[] | null;
-  long_running_tool_ids?: string[] | null;
+export interface SessionContent {
+  parts: SessionPart[];
 }
 
-/** A humanized step in the trace stream, with the raw event kept for the toggle. */
-export interface TraceStep {
+/** Open record: `tools_fired` plus any extra state keys (intent, turn_count…). */
+export type SessionStateDelta = Record<string, unknown> & {
+  tools_fired?: unknown;
+};
+
+export interface SessionActions {
+  state_delta?: SessionStateDelta;
+}
+
+/** One streamed session event (one `data:` frame from the SSE endpoint). */
+export interface SessionEvent {
   id: string;
-  icon: string;
-  label: string;
-  raw: RunEvent;
+  invocation_id: string;
+  timestamp: number;
+  author: string;
+  content?: SessionContent | null;
+  actions?: SessionActions | null;
 }

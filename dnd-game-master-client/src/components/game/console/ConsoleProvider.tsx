@@ -11,14 +11,14 @@ import {
   type ReactNode,
 } from "react";
 import {
-  getSessionEvents,
   sendDecision,
+  sessionStreamUrl,
   submitTurn as submitTurnApi,
 } from "@/lib/api";
-import type { RunEvent, TraceStep, TurnSnapshot } from "@/lib/types";
+import type { SessionEvent, TurnSnapshot } from "@/lib/types";
 import { useGame } from "@/context/GameContext";
 import { GAME_CATALOG } from "@/lib/games";
-import { extractDraft, friendlyStep, isApprovalPause } from "./trace";
+import { extractDraft, isApprovalEvent } from "./events";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -41,20 +41,22 @@ interface ConsoleState {
   /** When true, the reader/map show the in-flight turn instead of a snapshot. */
   viewPending: boolean;
   runStatus: RunStatus;
-  trace: TraceStep[];
+  events: SessionEvent[];
   pendingDraft: string | null;
   composerDraft: string;
   error: string | null;
+  streamDelaying: boolean;
 }
 
 const initialState: ConsoleState = {
   activeIndex: -1,
   viewPending: false,
   runStatus: "idle",
-  trace: [],
+  events: [],
   pendingDraft: null,
   composerDraft: "",
   error: null,
+  streamDelaying: false,
 };
 
 type Action =
@@ -63,12 +65,15 @@ type Action =
   | { type: "SET_COMPOSER"; text: string }
   | { type: "RUN_START" }
   | { type: "RESUME_RUN" }
-  | { type: "SET_TRACE"; trace: TraceStep[] }
+  | { type: "APPEND_EVENT"; event: SessionEvent }
+  | { type: "CLEAR_EVENTS" }
   | { type: "AWAIT_APPROVAL"; draft: string }
   | { type: "RUN_DONE" }
   | { type: "REJECTING" }
   | { type: "REJECTED" }
-  | { type: "RUN_ERROR"; message: string };
+  | { type: "RUN_ERROR"; message: string }
+  | { type: "START_STREAM_DELAY" }
+  | { type: "END_STREAM_DELAY" };
 
 function reducer(state: ConsoleState, action: Action): ConsoleState {
   switch (action.type) {
@@ -83,14 +88,17 @@ function reducer(state: ConsoleState, action: Action): ConsoleState {
         ...state,
         runStatus: "running",
         viewPending: true,
-        trace: [],
+        events: [],
         pendingDraft: null,
         error: null,
       };
     case "RESUME_RUN":
       return { ...state, runStatus: "running", viewPending: true, pendingDraft: null };
-    case "SET_TRACE":
-      return { ...state, trace: action.trace };
+    case "APPEND_EVENT":
+      if (state.events.some((e) => e.id === action.event.id)) return state;
+      return { ...state, events: [...state.events, action.event] };
+    case "CLEAR_EVENTS":
+      return { ...state, events: [] };
     case "AWAIT_APPROVAL":
       return {
         ...state,
@@ -99,7 +107,7 @@ function reducer(state: ConsoleState, action: Action): ConsoleState {
         pendingDraft: action.draft,
       };
     case "RUN_DONE":
-      return { ...state, runStatus: "idle", viewPending: false, pendingDraft: null };
+      return { ...state, runStatus: "idle", viewPending: false, events: [], pendingDraft: null };
     case "REJECTING":
       return { ...state, runStatus: "rejecting", pendingDraft: null };
     case "REJECTED":
@@ -107,11 +115,15 @@ function reducer(state: ConsoleState, action: Action): ConsoleState {
         ...state,
         runStatus: "idle",
         viewPending: false,
-        trace: [],
+        events: [],
         pendingDraft: null,
       };
     case "RUN_ERROR":
       return { ...state, runStatus: "error", viewPending: false, error: action.message };
+    case "START_STREAM_DELAY":
+      return { ...state, streamDelaying: true };
+    case "END_STREAM_DELAY":
+      return { ...state, streamDelaying: false };
     default:
       return state;
   }
@@ -134,13 +146,15 @@ interface ConsoleContextValue {
   /** The reader/map should display the in-flight turn rather than a snapshot. */
   viewPending: boolean;
   runStatus: RunStatus;
-  trace: TraceStep[];
+  events: SessionEvent[];
   pendingDraft: string | null;
   composerDraft: string;
   error: string | null;
+  streamDelaying: boolean;
   submitTurn: (args: { text: string; dice?: DiceRolls }) => void;
   approve: () => void;
   reject: () => void;
+  reconnectStream: () => void;
   selectTurn: (index: number) => void;
   selectPending: () => void;
   setComposerDraft: (text: string) => void;
@@ -156,31 +170,16 @@ function formatDice(dice?: DiceRolls): string {
   return parts.length ? `(rolled ${parts.join(", ")})` : "";
 }
 
-const POLL_MS = 500;
 // The ambient POST runs the entire turn synchronously server-side and can
 // legitimately take a while (multiple agent/tool calls). A dev proxy or flaky
-// connection can drop the response with a 500 long before the backend is done
-// — but the backend keeps working and logs no error. This is how long we keep
+// connection can drop the response long before the backend is done — but the
+// backend keeps working and the SSE keeps streaming. This is how long we keep
 // watching for the real outcome before giving up.
 const OUTCOME_GRACE_MS = 90_000;
-const OUTCOME_RECHECK_MS = 2_000;
-
-/** Build the friendly trace from the full event list, collapsing repeats. */
-function buildTrace(events: RunEvent[]): TraceStep[] {
-  const steps: TraceStep[] = [];
-  for (const ev of events) {
-    const fs = friendlyStep(ev);
-    if (!fs) continue;
-    if (steps.length && steps[steps.length - 1].label === fs.label) continue;
-    steps.push({ id: `t${steps.length}`, icon: fs.icon, label: fs.label, raw: ev });
-  }
-  return steps;
-}
-
-function lastIsApprovalPause(events: RunEvent[]): boolean {
-  const last = events[events.length - 1];
-  return Boolean(last && isApprovalPause(last));
-}
+const OUTCOME_RECHECK_MS = 1_500;
+// On a fresh mount, how long to watch the stream for an already-paused approval
+// before concluding the session is settled and dropping the stream.
+const RESTORE_PROBE_MS = 4_000;
 
 interface ConsoleProviderProps {
   history: TurnSnapshot[];
@@ -194,8 +193,8 @@ interface ConsoleProviderProps {
 
 /**
  * Owns ALL shared console state and the run lifecycle: submit a turn via the
- * ambient Pub/Sub endpoint, poll the session events API for the live trace and
- * the HITL pause, then approve/reject through /run. Feature panels are pure
+ * ambient Pub/Sub endpoint, stream the session events over SSE for the live
+ * trace + HITL pause, then approve/reject through /run. Feature panels are pure
  * consumers, so every layout behaves identically.
  */
 export function ConsoleProvider({
@@ -218,7 +217,10 @@ export function ConsoleProvider({
   const statusRef = useRef<RunStatus>("idle");
   const pendingRef = useRef(false);
   const historyRef = useRef(history);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Live event stream state (kept in refs so the EventSource callback is current).
+  const esRef = useRef<EventSource | null>(null);
+  const eventsRef = useRef<SessionEvent[]>([]);
+  const seenRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     historyRef.current = history;
@@ -246,94 +248,77 @@ export function ConsoleProvider({
       .filter((p) => p.name.trim())
       .map((p) => `${p.name} the ${p.role || p.className} (${p.className})`)
       .join("; ");
-    return `[New campaign] Adventure: "${campaignName}". Party: ${
-      roster || "to be determined"
-    }. Set up the campaign and party, then begin:`;
+    return `[New campaign] Adventure: "${campaignName}". Party: ${roster || "to be determined"
+      }. Set up the campaign and party, then begin:`;
   }, [game.party, campaignName]);
 
-  const stopPolling = useCallback(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
+  const closeStream = useCallback(() => {
+    if (esRef.current) {
+      esRef.current.close();
+      esRef.current = null;
     }
   }, []);
 
-  // Apply a freshly-fetched event list: update the trace, and if the run has
-  // paused for approval, surface the draft. Returns true when awaiting approval.
-  const applyEvents = useCallback((events: RunEvent[]): boolean => {
-    dispatch({ type: "SET_TRACE", trace: buildTrace(events) });
-    if (lastIsApprovalPause(events)) {
-      statusRef.current = "awaiting_approval";
-      dispatch({ type: "AWAIT_APPROVAL", draft: extractDraft(events) });
-      return true;
-    }
-    return false;
+  const resetEvents = useCallback(() => {
+    eventsRef.current = [];
+    seenRef.current = new Set();
   }, []);
 
-  const startPolling = useCallback(
+  // Open the SSE event stream for a session. Each frame is one SessionEvent; we
+  // append it (dedup by id) and, when the HITL pause arrives, surface the draft
+  // and close the stream — the run is parked until the GM decides.
+  const openStream = useCallback(
     (sid: string) => {
-      stopPolling();
-      const tick = async () => {
+      closeStream();
+      const es = new EventSource(sessionStreamUrl(sid));
+      esRef.current = es;
+      es.onmessage = (e) => {
+        let ev: SessionEvent;
         try {
-          const events = await getSessionEvents(sid, userIdRef.current);
-          if (events.length && applyEvents(events)) stopPolling();
+          ev = JSON.parse(e.data) as SessionEvent;
         } catch {
-          // transient — keep polling
+          return;
+        }
+        if (!ev?.id || seenRef.current.has(ev.id)) return;
+        seenRef.current.add(ev.id);
+        eventsRef.current = [...eventsRef.current, ev];
+        dispatch({ type: "APPEND_EVENT", event: ev });
+        if (isApprovalEvent(ev)) {
+          statusRef.current = "awaiting_approval";
+          dispatch({ type: "AWAIT_APPROVAL", draft: extractDraft(eventsRef.current) });
+          closeStream(); // run is paused at the gate — stop streaming (req 8)
         }
       };
-      tick(); // immediate, so the first (quick) event shows without delay
-      pollRef.current = setInterval(tick, POLL_MS);
+      // On a transient error EventSource auto-reconnects; the replay is deduped.
     },
-    [applyEvents, stopPolling],
-  );
-
-  // Called once the ambient POST (or a resume) resolves: stop polling, do a final
-  // read, and either settle into "awaiting approval" or finalize the turn.
-  const settleAfterRun = useCallback(
-    async (sid: string) => {
-      stopPolling();
-      const events = await getSessionEvents(sid, userIdRef.current).catch(() => []);
-      const awaiting = events.length ? applyEvents(events) : false;
-      if (!awaiting) {
-        statusRef.current = "idle";
-        dispatch({ type: "RUN_DONE" });
-        reloadHistory(); // outcome → history grows → reader snaps to it
-      }
-    },
-    [applyEvents, reloadHistory, stopPolling],
+    [closeStream],
   );
 
   /**
-   * The ambient/decision POST itself failed (e.g. a proxy timeout), but the
-   * backend may well have kept running. Rather than declaring the turn dead,
-   * keep watching: the poll loop (already running) will catch a HITL pause as
-   * soon as it lands, and we additionally watch for the turn persisting
-   * without one (e.g. a refusal). Only error out if neither happens in time.
+   * Wait for a submitted/resumed turn to reach its real outcome. The SSE drives
+   * the UI live (trace + approval); this just resolves the action's promise:
+   * the approval arriving flips status off "running", and a completed turn grows
+   * the persisted history. Errors out only if neither happens in the grace window.
    */
   const waitForOutcome = useCallback(
-    (sid: string, startHistoryLen: number): Promise<void> =>
+    (startHistoryLen: number): Promise<void> =>
       new Promise((resolve) => {
         const deadline = Date.now() + OUTCOME_GRACE_MS;
-        const check = async () => {
+        const check = () => {
           if (statusRef.current !== "running") {
-            resolve(); // the poll tick already resolved this (approval / etc.)
+            resolve(); // the SSE already settled this (approval / error)
             return;
           }
           if (historyRef.current.length > startHistoryLen) {
-            stopPolling();
+            closeStream();
             statusRef.current = "idle";
             dispatch({ type: "RUN_DONE" });
+            dispatch({ type: "SELECT_TURN", index: historyRef.current.length - 1 });
             resolve();
             return;
           }
           if (Date.now() >= deadline) {
-            // Last-chance read in case the pause landed between ticks.
-            const events = await getSessionEvents(sid, userIdRef.current).catch(() => []);
-            if (events.length && applyEvents(events)) {
-              resolve();
-              return;
-            }
-            stopPolling();
+            closeStream();
             statusRef.current = "error";
             dispatch({
               type: "RUN_ERROR",
@@ -348,7 +333,7 @@ export function ConsoleProvider({
         };
         check();
       }),
-    [applyEvents, reloadHistory, stopPolling],
+    [closeStream, reloadHistory],
   );
 
   const submitTurn = useCallback(
@@ -367,26 +352,24 @@ export function ConsoleProvider({
 
       statusRef.current = "running";
       dispatch({ type: "RUN_START" });
-      startPolling(sid);
-      try {
-        await submitTurnApi({ sessionId: sid, userId: userIdRef.current, action: finalAction });
-      } catch {
-        // Don't kill polling/show a dead-end error here — the request may have
-        // failed in transit (e.g. a dev-proxy timeout) while the backend kept
-        // working. Keep watching for the real outcome instead.
-        await waitForOutcome(sid, startLen);
-        return;
-      }
-      await settleAfterRun(sid);
+      resetEvents();
+
+      dispatch({ type: "START_STREAM_DELAY" });
+      setTimeout(() => {
+        if (statusRef.current === "running") {
+          dispatch({ type: "END_STREAM_DELAY" });
+          openStream(sid);
+        }
+      }, 5000);
+
+      // The POST may resolve or fail in transit; either way the SSE + history
+      // tell us the real outcome.
+      await submitTurnApi({ sessionId: sid, userId: userIdRef.current, action: finalAction }).catch(
+        () => undefined,
+      );
+      await waitForOutcome(startLen);
     },
-    [
-      campaignId,
-      game.branch,
-      bootstrapPreamble,
-      startPolling,
-      settleAfterRun,
-      waitForOutcome,
-    ],
+    [campaignId, game.branch, bootstrapPreamble, openStream, resetEvents, waitForOutcome],
   );
 
   const approve = useCallback(async () => {
@@ -394,20 +377,17 @@ export function ConsoleProvider({
     const startLen = historyRef.current.length;
     statusRef.current = "running";
     dispatch({ type: "RESUME_RUN" });
-    startPolling(campaignId);
-    try {
-      await sendDecision({ sessionId: campaignId, userId: userIdRef.current, approved: true });
-    } catch {
-      await waitForOutcome(campaignId, startLen);
-      return;
-    }
-    await settleAfterRun(campaignId);
-  }, [campaignId, startPolling, settleAfterRun, waitForOutcome]);
+    openStream(campaignId); // stream the continuation (replayed events are deduped)
+    await sendDecision({ sessionId: campaignId, userId: userIdRef.current, approved: true }).catch(
+      () => undefined,
+    );
+    await waitForOutcome(startLen);
+  }, [campaignId, openStream, waitForOutcome]);
 
   const reject = useCallback(async () => {
     if (statusRef.current !== "awaiting_approval" || !campaignId) return;
     statusRef.current = "rejecting";
-    stopPolling();
+    closeStream();
     dispatch({ type: "REJECTING" });
     try {
       await sendDecision({ sessionId: campaignId, userId: userIdRef.current, approved: false });
@@ -417,7 +397,13 @@ export function ConsoleProvider({
     statusRef.current = "idle";
     dispatch({ type: "REJECTED" });
     dispatch({ type: "SELECT_TURN", index: historyRef.current.length - 1 });
-  }, [campaignId, stopPolling]);
+  }, [campaignId, closeStream]);
+
+  const reconnectStream = useCallback(() => {
+    if (campaignId) {
+      openStream(campaignId);
+    }
+  }, [campaignId, openStream]);
 
   const selectTurn = useCallback((index: number) => {
     dispatch({ type: "SELECT_TURN", index });
@@ -429,25 +415,24 @@ export function ConsoleProvider({
     dispatch({ type: "SET_COMPOSER", text });
   }, []);
 
-  // On fresh mount, restore a turn that's already paused at the HITL gate so the
-  // approval bar shows immediately (e.g. after a reload mid-approval).
+  // On fresh mount, probe the stream: if the session is already paused at the
+  // HITL gate, the replayed approval event restores the approval bar. If nothing
+  // is pending within the probe window, drop the stream (settled session).
   useEffect(() => {
     if (!campaignId) return;
-    let cancelled = false;
-    (async () => {
-      const events = await getSessionEvents(campaignId, userIdRef.current).catch(() => []);
-      if (cancelled || !events.length || !lastIsApprovalPause(events)) return;
-      statusRef.current = "awaiting_approval";
-      pendingRef.current = true;
-      applyEvents(events);
-    })();
+    resetEvents();
+    openStream(campaignId);
+    const probe = setTimeout(() => {
+      if (statusRef.current === "idle") {
+        closeStream();
+        dispatch({ type: "CLEAR_EVENTS" });
+      }
+    }, RESTORE_PROBE_MS);
     return () => {
-      cancelled = true;
+      clearTimeout(probe);
+      closeStream();
     };
-  }, [campaignId, applyEvents]);
-
-  // Clean up polling on unmount.
-  useEffect(() => stopPolling, [stopPolling]);
+  }, [campaignId, openStream, closeStream, resetEvents]);
 
   const pending = state.runStatus !== "idle" && state.runStatus !== "error";
   const activeSnapshot =
@@ -467,13 +452,15 @@ export function ConsoleProvider({
     pending,
     viewPending: state.viewPending,
     runStatus: state.runStatus,
-    trace: state.trace,
+    events: state.events,
     pendingDraft: state.pendingDraft,
     composerDraft: state.composerDraft,
     error: state.error,
+    streamDelaying: state.streamDelaying,
     submitTurn,
     approve,
     reject,
+    reconnectStream,
     selectTurn,
     selectPending,
     setComposerDraft,

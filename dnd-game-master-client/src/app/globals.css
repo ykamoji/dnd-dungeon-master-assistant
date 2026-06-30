@@ -52,9 +52,9 @@ body {
 /* Faint parchment grain usable on panels: class `.parchment` */
 .parchment {
   background-color: var(--color-stone);
-  background-image:
+  /* background-image:
     radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    radial-gradient(rgba(0, 0, 0, 0.25) 1px, transparent 1px);
+    radial-gradient(rgba(0, 0, 0, 0.25) 1px, transparent 1px); */
   background-size: 6px 6px, 6px 6px;
   background-position: 0 0, 3px 3px;
 }
@@ -72,15 +72,18 @@ body {
   scrollbar-width: thin;
   scrollbar-color: var(--color-stone-2) transparent;
 }
+
 .scroll-thin::-webkit-scrollbar {
   width: 8px;
 }
+
 .scroll-thin::-webkit-scrollbar-thumb {
   background: var(--color-stone-2);
   border-radius: 9999px;
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {

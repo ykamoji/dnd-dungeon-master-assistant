@@ -19,7 +19,7 @@ export function CommandComposer({
   placeholder = "What do you do? (e.g. “I attack the goblin with my longsword”)",
 }: CommandComposerProps) {
   return (
-    <div className="flex items-end gap-3">
+    <div className="flex flex-1 gap-3">
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -33,7 +33,7 @@ export function CommandComposer({
         placeholder={placeholder}
         className="scroll-thin min-h-[3rem] w-full resize-none rounded-card border border-stone-2 bg-obsidian-2 px-4 py-3 font-body text-parchment outline-none transition-colors placeholder:text-parchment-dim/60 focus:border-gold/60"
       />
-      <Button onClick={onSubmit} disabled={disabled || !value.trim()} className="shrink-0 mb-5">
+      <Button onClick={onSubmit} disabled={disabled || !value.trim()} className="shrink-0">
         Send
       </Button>
     </div>

@@ -11,8 +11,8 @@ export function SceneCenterLayout() {
       <aside className="parchment hidden min-h-0 rounded-card border border-stone-2 p-3 lg:block">
         <JourneyMapPanel orientation="vertical" />
       </aside>
-      <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_20rem] gap-4">
-        <div className="parchment min-h-0 rounded-card border border-stone-2 p-5">
+      <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_8rem] gap-4">
+        <div className="parchment min-h-0 rounded-card border border-stone-2 p-2">
           <SceneReaderPanel />
         </div>
         <div className="parchment min-h-0 rounded-card border border-stone-2 p-4">

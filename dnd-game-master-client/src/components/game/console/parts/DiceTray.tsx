@@ -26,8 +26,8 @@ function Die({ sides, armed, result, onToggle }: DieProps) {
       onClick={onToggle}
       title={`Arm d${sides}`}
       className={`relative flex h-14 w-14 flex-col items-center justify-center rounded-card border text-center transition-colors ${armed
-          ? "border-gold bg-gold/15 text-gold-bright"
-          : "border-stone-2 bg-obsidian-2 text-parchment-dim hover:border-gold/40"
+        ? "border-gold bg-gold/15 text-gold-bright"
+        : "border-stone-2 bg-obsidian-2 text-parchment-dim hover:border-gold/40"
         }`}
     >
       <span className="font-display text-[10px] uppercase tracking-widest">d{sides}</span>
@@ -57,7 +57,7 @@ export function DiceTray({ rolls, onRoll, disabled }: DiceTrayProps) {
   };
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 mt-4">
       <Die
         sides={20}
         armed={armed.d20}

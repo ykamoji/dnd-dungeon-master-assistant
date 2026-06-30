@@ -8,8 +8,9 @@ import { useConsole } from "../ConsoleProvider";
 import { intentMeta } from "../snapshot";
 import { AssetGallery } from "../parts/AssetGallery";
 import { PartyStatGrid } from "../parts/PartyStatGrid";
-import { TraceStream } from "../parts/TraceStream";
-import type { CombatEntry, DialogueLine, TraceStep } from "@/lib/types";
+import { EventTimeline } from "../parts/EventTimeline";
+import { ApprovalBar } from "../parts/ApprovalBar";
+import type { CombatEntry, DialogueLine, SessionEvent, TurnSnapshot, PartyState } from "@/lib/types";
 
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
@@ -90,110 +91,68 @@ function SuggestionChips({
   );
 }
 
-/**
- * The in-flight turn: the live trace while the Dungeon Master works, and the
- * draft once it pauses for approval. Shown in the reader so the GM watches the
- * scene take shape where the result will appear (req 1, req 5).
- */
-function PendingView({
-  trace,
-  awaiting,
-  draft,
-}: {
-  trace: TraceStep[];
-  awaiting: boolean;
-  draft: string | null;
-}) {
-  return (
-    <div className="flex h-full flex-col gap-4 pb-2">
-      <header>
-        <p className="font-display text-[10px] uppercase tracking-[0.3em] text-gold">
-          {awaiting ? "Draft awaiting your approval" : "The Dungeon Master is at work"}
-        </p>
-        <h2 className="text-gilded mt-1 font-display text-2xl font-bold tracking-wide">
-          {awaiting ? "Review the turn" : "Weaving the scene…"}
-        </h2>
-      </header>
+function parseDraftToSnapshot(draft: string): TurnSnapshot | null {
+  try {
+    const match = draft.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    const data = JSON.parse(match[0]);
 
-      {awaiting && draft && (
-        <div className="parchment scroll-thin max-h-[45%] overflow-y-auto rounded-card border border-gold/40 p-4">
-          <p className="whitespace-pre-wrap font-body text-parchment">{draft}</p>
-        </div>
-      )}
+    let partyState: PartyState | undefined;
+    if (Array.isArray(data.party)) {
+      partyState = { characters: {} };
+      for (const char of data.party) {
+        if (char.name) {
+          partyState.characters[char.name] = char;
+        }
+      }
+    }
 
-      <div className="parchment scroll-thin min-h-0 flex-1 overflow-hidden rounded-card border border-stone-2 p-4">
-        <TraceStream trace={trace} running={!awaiting} />
-      </div>
-    </div>
-  );
+    return {
+      scene: data.scene_summary,
+      description: data.description,
+      narrative: data.narrative,
+      dialogue: data.dialogue,
+      initiative: data.initiative,
+      party: partyState,
+      intent: data.intent || "CAMPAIGN",
+      metadata: {
+        chapter: data.chapter,
+        section: data.section,
+        assets: data.assets,
+        gm_notes: data.gm_notes,
+        next_scene_suggestions: data.next_scene_suggestions,
+        suggested_actions: data.suggested_actions,
+        combat_log: data.combat_log,
+        math_breakdown: data.math_breakdown,
+        requires_roll: data.requires_roll
+      }
+    };
+  } catch (e) {
+    return null;
+  }
 }
 
-/**
- * The scene/outcome reader (req 1.2 + req 3) — one component for both a clicked
- * historical turn and the just-completed outcome. Fed the active TurnSnapshot.
- */
-export function SceneReaderPanel() {
-  const {
-    activeSnapshot,
-    historyLoading,
-    history,
-    progress,
-    summary,
-    setComposerDraft,
-    viewPending,
-    runStatus,
-    trace,
-    pendingDraft,
-  } = useConsole();
+function SnapshotLayout({
+  snapshot,
+  progress,
+  summary,
+  setComposerDraft,
+}: {
+  snapshot: TurnSnapshot;
+  progress?: number | null;
+  summary?: string | null;
+  setComposerDraft: (text: string) => void;
+}) {
   const [partyModalOpen, setPartyModalOpen] = useState(false);
-
-  // While a turn is in flight, the reader shows the live trace / pending draft.
-  if (viewPending) {
-    return (
-      <PendingView
-        trace={trace}
-        awaiting={runStatus === "awaiting_approval"}
-        draft={pendingDraft}
-      />
-    );
-  }
-
-  if (historyLoading && history.length === 0) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader label="Reading the scene…" />
-      </div>
-    );
-  }
-
-  if (!activeSnapshot) {
-    return (
-      <div className="flex h-full items-center justify-center text-center">
-        <div className="parchment max-w-md rounded-card border border-gold/30 p-8">
-          <p className="font-display text-[10px] uppercase tracking-[0.3em] text-gold">
-            The table is set
-          </p>
-          <h2 className="text-gilded mt-3 font-display text-3xl font-bold tracking-wide">
-            Your adventure awaits
-          </h2>
-          <p className="mt-3 font-rune text-parchment-dim">
-            Issue your first command to the Dungeon Master, and the unfolding scene
-            will appear here.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const s = activeSnapshot;
+  const s = snapshot;
   const meta = s.metadata ?? {};
   const chapterLine = [meta.chapter, meta.section].filter(Boolean).join(" · ");
   const showDescription = s.description && s.description !== s.narrative;
 
   return (
-    <div className="flex h-full gap-8 overflow-hidden pr-2">
+    <div className="flex h-full gap-4 overflow-hidden pr-2">
       {/* Left Column: Metadata & Actions */}
-      <div className="scroll-thin flex w-1/3 flex-shrink-0 flex-col gap-6 overflow-y-auto pb-6">
+      <div className="overflow-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex w-1/3 flex-shrink-0 flex-col gap-6 overflow-y-auto pb-6">
         <header>
           {chapterLine && (
             <p className="font-rune text-xs uppercase tracking-widest text-parchment-dim">
@@ -204,7 +163,7 @@ export function SceneReaderPanel() {
             <h2 className="text-gilded font-display text-3xl font-bold tracking-wide">
               {s.scene || "The scene unfolds"}
             </h2>
-            <span className="rounded-full border border-gold/30 px-2 py-0.5 font-rune text-xs text-gold whitespace-nowrap">
+            <span className="rounded-full border border-gold/30 px-3 py-1 font-rune text-md text-gold whitespace-nowrap">
               {intentMeta(s.intent).icon} {intentMeta(s.intent).label}
             </span>
           </div>
@@ -246,16 +205,16 @@ export function SceneReaderPanel() {
       </div>
 
       {/* Right Column: Main Content */}
-      <div className="scroll-thin flex flex-1 flex-col gap-6 overflow-y-auto border-l border-gold/20 pl-8 pb-6">
+      <div className="overflow-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex flex-1 flex-col gap-6 overflow-y-auto border-l border-gold/20 pl-3 pb-6">
         <AssetGallery assets={meta.assets} alt={s.scene ?? "Scene"} />
 
         {showDescription && (
-          <p className="font-body text-lg leading-relaxed text-parchment-dim">
+          <p className="font-body text-md leading-relaxed text-parchment-dim">
             {s.description}
           </p>
         )}
         {s.narrative && (
-          <p className="font-body text-lg leading-relaxed text-parchment">{s.narrative}</p>
+          <p className="font-body text-md leading-relaxed text-parchment">{s.narrative}</p>
         )}
 
         {s.dialogue && s.dialogue.length > 0 && (
@@ -301,5 +260,144 @@ export function SceneReaderPanel() {
         <PartyStatGrid party={s.party} />
       </Modal>
     </div>
+  );
+}
+
+/**
+ * The in-flight turn: the live trace while the Dungeon Master works, and the
+ * draft once it pauses for approval. Shown in the reader so the GM watches the
+ * scene take shape where the result will appear (req 1, req 5).
+ */
+function PendingView({
+  events,
+  awaiting,
+  draft,
+  onSync,
+}: {
+  events: SessionEvent[];
+  awaiting: boolean;
+  draft: string | null;
+  onSync: () => void;
+}) {
+  const { setComposerDraft, approve, reject } = useConsole();
+  const parsedDraft = awaiting && draft ? parseDraftToSnapshot(draft) : null;
+
+  return (
+    <div className="flex h-full flex-col gap-2">
+      <header className="flex items-start justify-between">
+        <div>
+          <p className="font-display text-[10px] uppercase tracking-[0.3em] text-gold">
+            {awaiting ? "" : "The Dungeon Master is at work"}
+          </p>
+          <h2 className="text-gilded mt-1 font-display text-2xl font-bold tracking-wide">
+            {awaiting ? "" : "Weaving the scene…"}
+          </h2>
+        </div>
+      </header>
+
+      {awaiting && parsedDraft ? (
+        <div className="parchment min-h-[300px] flex-1 overflow-hidden rounded-card border border-gold/40 p-4">
+          <SnapshotLayout snapshot={parsedDraft} setComposerDraft={setComposerDraft} />
+        </div>
+      ) : awaiting && draft ? (
+        <div className="parchment scroll-thin overflow-y-auto rounded-card border border-gold/40 p-4">
+          <p className="whitespace-pre-wrap font-body text-parchment">{draft}</p>
+        </div>
+      ) : null}
+
+      <div className="parchment scroll-thin overflow-y-auto rounded-card">
+        {!awaiting && <>
+          <Button onClick={onSync} className="float-right">
+            Sync
+          </Button>
+          <EventTimeline events={events} running={!awaiting} />
+        </>}
+        {awaiting && (
+          <div className="parchment flex justify-center">
+            <ApprovalBar
+              onApprove={approve}
+              onReject={reject}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The scene/outcome reader — one component for both a clicked
+ * historical turn and the just-completed outcome. Fed the active TurnSnapshot.
+ */
+export function SceneReaderPanel() {
+  const {
+    activeSnapshot,
+    historyLoading,
+    history,
+    progress,
+    summary,
+    setComposerDraft,
+    viewPending,
+    runStatus,
+    events,
+    pendingDraft,
+    streamDelaying,
+    reconnectStream,
+  } = useConsole();
+
+  if (streamDelaying) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader label="Waking up the Dungeon Master…" />
+      </div>
+    );
+  }
+
+  // While a turn is in flight, the reader shows the live timeline / pending draft.
+  if (viewPending) {
+    return (
+      <PendingView
+        events={events}
+        awaiting={runStatus === "awaiting_approval"}
+        draft={pendingDraft}
+        onSync={reconnectStream}
+      />
+    );
+  }
+
+  if (historyLoading && history.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader label="Reading the scene…" />
+      </div>
+    );
+  }
+
+  if (!activeSnapshot) {
+    return (
+      <div className="flex h-full items-center justify-center text-center">
+        <div className="parchment max-w-md rounded-card border border-gold/30 p-8">
+          <p className="font-display text-[10px] uppercase tracking-[0.3em] text-gold">
+            The table is set
+          </p>
+          <h2 className="text-gilded mt-3 font-display text-3xl font-bold tracking-wide">
+            Your adventure awaits
+          </h2>
+          <p className="mt-3 font-rune text-parchment-dim">
+            Issue your first command to the Dungeon Master, and the unfolding scene
+            will appear here.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <SnapshotLayout
+      snapshot={activeSnapshot}
+      progress={progress}
+      summary={summary}
+      setComposerDraft={setComposerDraft}
+    />
   );
 }

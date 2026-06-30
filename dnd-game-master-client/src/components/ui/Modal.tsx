@@ -14,8 +14,8 @@ interface ModalProps {
 }
 
 const SIZE: Record<NonNullable<ModalProps["size"]>, string> = {
-  md: "max-w-md",
-  lg: "max-w-2xl",
+  md: "max-w-7md",
+  lg: "max-w-7xl",
 };
 
 /** Themed popup dialog (used for "coming soon" campaigns + DNA profile). */
