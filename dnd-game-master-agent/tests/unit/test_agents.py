@@ -37,6 +37,20 @@ action_data = load_dataset("action_dataset.json")
 npc_data = load_dataset("npc_dataset.json")
 campaign_data = load_dataset("campaign_dataset.json")
 
+# Starting campaign snapshot shared by the MongoDB mock and the per-agent test
+# state. The executor instruction templates reference {campaign_state}, which the
+# prepare node seeds in the real pipeline; isolated unit tests must seed it too.
+_MOCK_CAMPAIGN = {
+    "campaign_id": "test_campaign",
+    "campaign_name": "tomb-of-annihilation",
+    "state": [{
+        "scene": "Jungle Edge",
+        "description": "You stand at the edge of the jungle.",
+        "party": {"characters": {"Hero": {"hp": 10, "max_hp": 10}}},
+        "initiative": ["Hero"],
+    }],
+}
+
 
 @pytest.fixture
 def session_service():
@@ -69,16 +83,7 @@ def mock_mongo_tools():
          patch("app.tools.campaign.update_campaign") as mock_update:
         
         # Mock get_campaign to return a valid starting state
-        mock_get.return_value = {
-            "campaign_id": "test_campaign",
-            "campaign_name": "tomb-of-annihilation",
-            "state": [{
-                "scene": "Jungle Edge",
-                "description": "You stand at the edge of the jungle.",
-                "party": {"characters": {"Hero": {"hp": 10, "max_hp": 10}}},
-                "initiative": ["Hero"]
-            }]
-        }
+        mock_get.return_value = _MOCK_CAMPAIGN
         
         # Mock update_campaign to just return the args as the new state
         mock_update.return_value = {"status": "success"}
@@ -94,6 +99,7 @@ async def test_action_agent(case, session_service):
     initial_state = {
         "last_player_action": case["input"],
         "campaign_id": session_id,
+        "campaign_state": json.dumps(_MOCK_CAMPAIGN),
         "tools_fired": [],
         "last_agent": [],
         "eval_feedback": ""
@@ -130,6 +136,7 @@ async def test_npc_dialogue_agent(case, session_service):
     initial_state = {
         "last_player_action": case["input"],
         "campaign_id": session_id,
+        "campaign_state": json.dumps(_MOCK_CAMPAIGN),
         "tools_fired": [],
         "last_agent": [],
         "eval_feedback": ""
@@ -160,6 +167,7 @@ async def test_campaign_agent(case, session_service):
     initial_state = {
         "last_player_action": case["input"],
         "campaign_id": session_id,
+        "campaign_state": json.dumps(_MOCK_CAMPAIGN),
         "tools_fired": [],
         "last_agent": [],
         "eval_feedback": ""

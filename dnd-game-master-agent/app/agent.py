@@ -41,6 +41,9 @@ State contract (unchanged):
 - state.gm_response: final formatted output
 """
 
+import base64
+import binascii
+import json
 from typing import Any
 
 from google.adk.agents.context import Context
@@ -49,22 +52,20 @@ from google.adk.events.event import Event
 from google.adk.events.request_input import RequestInput
 from google.adk.workflow import Workflow, node
 from google.genai import types
-import json
 
+from app.agents.action_agent import action_agent
+from app.agents.callbacks import _build_party_state, evaluate_input_safety
+from app.agents.campaign_agent import campaign_agent
+from app.agents.npc_dialogue_agent import npc_dialogue_agent
+from app.agents.output_agent import output_agent
+from app.agents.setup_agent import setup_agent
+from app.agents.supervisor_agent import classifier
 from app.tools.campaign import (
     CharacterState,
     PartyState,
     get_campaign,
     update_campaign,
 )
-
-from app.agents.callbacks import _build_party_state, evaluate_input_safety
-from app.agents.supervisor_agent import classifier
-from app.agents.setup_agent import setup_agent
-from app.agents.action_agent import action_agent
-from app.agents.npc_dialogue_agent import npc_dialogue_agent
-from app.agents.campaign_agent import campaign_agent
-from app.agents.output_agent import output_agent
 
 _HITL_INTERRUPT_ID = "hitl_approval"
 _APPROVE_WORDS = {"ok", "yes", "y", "approve", "accept", "sure", "fine", "looks good"}
@@ -87,6 +88,60 @@ def _text_of(value: Any) -> str:
     return str(value)
 
 
+def _extract_player_action(node_input: Any) -> str:
+    """Pull the player's action out of a node_input that may be plain text or a
+    Pub/Sub message envelope.
+
+    Ambient mode feeds the workflow a JSON-serialized Pub/Sub ``message`` dict
+    (``{"data": "<base64>", "attributes": {...}}``); chat/playground/tests feed
+    plain text. We decode the former and pass the latter through untouched, so
+    the entry node is drivable from any source.
+    """
+    raw = _text_of(node_input)
+    if not raw:
+        return ""
+
+    try:
+        envelope = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return raw  # plain player text
+
+    # Only treat it as an envelope if it carries a recognised payload key;
+    # otherwise it's just a player message that happens to be valid JSON.
+    if not isinstance(envelope, dict) or not (
+        "data" in envelope or "action" in envelope or "message" in envelope
+    ):
+        return raw
+
+    if "data" in envelope:
+        data = envelope["data"]
+        if isinstance(data, str):
+            try:
+                payload: Any = base64.b64decode(data).decode("utf-8")
+            except (binascii.Error, ValueError, UnicodeDecodeError):
+                payload = data  # plain-string fallback (local testing)
+        else:
+            payload = data
+    else:
+        payload = envelope
+
+    # The payload may itself be a JSON object with an action field, or plain text.
+    if isinstance(payload, str):
+        try:
+            payload = json.loads(payload)
+        except (json.JSONDecodeError, TypeError):
+            return payload  # the action text itself
+
+    if isinstance(payload, dict):
+        return (
+            payload.get("action")
+            or payload.get("message")
+            or payload.get("text")
+            or ""
+        )
+    return str(payload)
+
+
 # ===========================================================================
 # FUNCTION NODES
 # ===========================================================================
@@ -94,7 +149,7 @@ def _text_of(value: Any) -> str:
 def prepare(ctx: Context, node_input: Any) -> Event:
     """Entry node: reset per-turn state, capture the player's message, and run
     the input guardrail. Routes "safe" or "blocked"."""
-    text = _text_of(node_input)
+    text = _extract_player_action(node_input)
     is_safe, reason, refusal = evaluate_input_safety(text)
     turn = ctx.state.get("turn_count", 0) + 1
     campaign_id = (
@@ -246,8 +301,9 @@ async def hitl_gate(ctx: Context, node_input: Any):
         yield Event(output="")
         return
 
-    turn = ctx.state.get("turn_count", 1)
-    interrupt_id = f"hitl_approval_{turn}"
+    # Fixed interrupt id so the UI always knows the function-call id to send back
+    # when resuming via the built-in /run endpoint.
+    interrupt_id = _HITL_INTERRUPT_ID
 
     if not ctx.resume_inputs or interrupt_id not in ctx.resume_inputs:
         preview = (

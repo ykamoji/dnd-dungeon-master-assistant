@@ -5,10 +5,27 @@ import sqlite3
 import json
 from pathlib import Path
 
-from app.db import check_health
+from app.db import check_health, get_campaigns_col
 from app.tools import TOOL_FUNCTIONS
+from data.loader import load_resource
 
 router = APIRouter()
+
+# Fields surfaced as a class "DNA profile" for the character/party builder UI.
+# Everything except `archetypes` is copied verbatim from the open5e class object.
+_CLASS_PROFILE_FIELDS = (
+    "name",
+    "slug",
+    "desc",
+    "hit_dice",
+    "hp_at_1st_level",
+    "prof_armor",
+    "prof_weapons",
+    "prof_saving_throws",
+    "prof_skills",
+    "spellcasting_ability",
+    "subtypes_name",
+)
 
 class PathsRequest(BaseModel):
     paths: List[str]
@@ -87,6 +104,71 @@ def api_get_asset_url(req: DescriptionRequest):
     if "error" in res:
         raise HTTPException(status_code=404, detail=res["error"])
     return res
+
+@router.get("/tools/classes")
+def api_list_classes():
+    """Expose D&D class "DNA profiles" for the character/party builder.
+
+    Returns a pruned view of each open5e class (data/open5e/classes.json):
+    core profile fields plus the list of archetypes (used as selectable "roles"
+    in the UI).
+    """
+    classes = load_resource("classes")
+    profiles = []
+    for cls in classes:
+        profile = {field: cls.get(field, "") for field in _CLASS_PROFILE_FIELDS}
+        profile["archetypes"] = [
+            {
+                "name": arch.get("name", ""),
+                "slug": arch.get("slug", ""),
+                "desc": arch.get("desc", ""),
+            }
+            for arch in cls.get("archetypes", [])
+        ]
+        profiles.append(profile)
+    return profiles
+
+
+@router.get("/campaigns")
+def api_list_campaigns():
+    """List saved campaigns (summaries) for the resume flow.
+
+    Projects only what the UI needs and derives a cover-art hint from the most
+    recent state snapshot's asset_urls.
+    """
+    col = get_campaigns_col()
+    cursor = col.find(
+        {},
+        {
+            "_id": 0,
+            "campaign_id": 1,
+            "campaign_name": 1,
+            "summary": 1,
+            "progress": 1,
+            "updated_at": 1,
+            # Only the latest snapshot — enough for a cover image + current scene.
+            "state": {"$slice": -1},
+        },
+    )
+
+    campaigns = []
+    for doc in cursor:
+        latest = (doc.get("state") or [{}])[-1]
+        metadata = latest.get("metadata") or {}
+        asset_urls = metadata.get("asset_urls") or latest.get("asset_urls") or []
+        campaigns.append(
+            {
+                "campaign_id": doc.get("campaign_id"),
+                "campaign_name": doc.get("campaign_name"),
+                "summary": doc.get("summary"),
+                "progress": doc.get("progress"),
+                "updated_at": doc.get("updated_at"),
+                "scene": latest.get("scene", ""),
+                "cover_url": asset_urls[0] if asset_urls else None,
+            }
+        )
+    return campaigns
+
 
 def dict_deep_update(base: dict, update: dict) -> dict:
     for k, v in update.items():

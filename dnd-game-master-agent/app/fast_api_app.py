@@ -16,13 +16,26 @@
 Exposes the agent's graph workflow via HTTP endpoints for interaction and playground integration.
 """
 
+import logging
 import os
+
+from dotenv import load_dotenv
+
+AGENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Load environment variables before importing/initializing the ADK agents.
+load_dotenv(os.path.join(AGENT_DIR, ".env"))
 
 from fastapi import FastAPI
 from google.adk.cli.fast_api import get_fast_api_app
 
 from app.app_utils.telemetry import setup_telemetry
 from app.app_utils.typing import Feedback
+
+# Standard Python logging for console output (ambient event handling, etc.).
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 
 setup_telemetry()
 
@@ -45,9 +58,11 @@ allow_origins = (
 # Artifact bucket for ADK (created by Terraform, passed via env var)
 logs_bucket_name = os.environ.get("LOGS_BUCKET_NAME")
 
-AGENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# In-memory session configuration - no persistent storage
-session_service_uri = None
+# Session storage. Default (None) resolves to per-agent local SQLite at
+# app/.adk/session.db locally, which the ambient handler and the built-in /run
+# resume endpoint share. On Cloud Run/GKE that falls back to in-memory, so set
+# SESSION_SERVICE_URI (e.g. a postgres URI) for durable, resumable sessions.
+session_service_uri = os.getenv("SESSION_SERVICE_URI")
 
 artifact_service_uri = f"gs://{logs_bucket_name}" if logs_bucket_name else None
 
@@ -62,10 +77,13 @@ app: FastAPI = get_fast_api_app(
 app.title = "dnd-game-master-agent"
 app.description = "API for interacting with the Agent dnd-game-master-agent"
 
+from app.ambient import router as ambient_router
 from app.custom import router as custom_router
 from app.db import close_client
 
 app.include_router(custom_router)
+# Ambient entry point: Pub/Sub push events drive the workflow (no chat needed).
+app.include_router(ambient_router)
 
 @app.on_event("shutdown")
 def shutdown_event():
