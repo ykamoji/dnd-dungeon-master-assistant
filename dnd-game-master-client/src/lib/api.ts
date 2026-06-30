@@ -5,9 +5,15 @@
 // FastAPI backend by next.config.ts rewrites (no CORS). Set it to an absolute
 // origin only if you bypass the proxy.
 
-import type { CampaignSummary, ClassProfile } from "./types";
+import type { Campaign, CampaignSummary, ClassProfile, RunEvent } from "./types";
 
 export const ROOT_API = "";
+
+/** ADK app name — must match the backend `App(name="app")`. */
+export const APP_NAME = "app";
+
+/** Fixed interrupt id the workflow's hitl_gate pauses on (see app/agent.py). */
+export const HITL_INTERRUPT_ID = "hitl_approval";
 
 async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${ROOT_API}${path}`, {
@@ -30,13 +36,13 @@ export function getCampaigns(): Promise<CampaignSummary[]> {
   return getJSON<CampaignSummary[]>("/campaigns");
 }
 
-/** GET /campaign/{id} — full campaign document. */
+/** GET /campaign/{id} — full campaign document (`state` = 1 or N turns). */
 export function getCampaign(
   campaignId: string,
   includeHistory = false,
-): Promise<unknown> {
+): Promise<Campaign> {
   const q = includeHistory ? "?include_history=true" : "";
-  return getJSON(`/campaign/${encodeURIComponent(campaignId)}${q}`);
+  return getJSON<Campaign>(`/campaign/${encodeURIComponent(campaignId)}${q}`);
 }
 
 /** POST /tools/fetch_campaign_files — fetch adventure markdown docs by path. */
@@ -58,4 +64,97 @@ export function getAssetUrl(description: string): Promise<{ url?: string }> {
 /** GET /health/db — backend MongoDB health. */
 export function healthDb(): Promise<{ status: string }> {
   return getJSON("/health/db");
+}
+
+// ---------------------------------------------------------------------------
+// ADK run lifecycle (ambient submit → poll session events → approve/reject).
+//
+// A turn is submitted through the ambient Pub/Sub handler (POST /ambient), which
+// creates/reuses the session keyed by campaign_id and runs the workflow until it
+// finishes or pauses at the HITL gate. The UI then polls the session events API
+// to render the live trace and detect the pending approval, and resolves it via
+// the built-in /run endpoint.
+// ---------------------------------------------------------------------------
+
+/** Base64-encode a UTF-8 string (btoa only handles latin1). */
+function b64(s: string): string {
+  return btoa(unescape(encodeURIComponent(s)));
+}
+
+/**
+ * POST /ambient (→ backend "/") — submit a turn as a Pub/Sub push message. The
+ * subscription is the session id (== campaign id); `data` carries the player's
+ * action. Resolves when the run finishes or pauses for approval.
+ */
+export async function submitTurn(args: {
+  sessionId: string;
+  userId: string;
+  action: string;
+}): Promise<void> {
+  const payload = {
+    message: {
+      data: b64(JSON.stringify({ action: args.action })),
+      attributes: { user_id: args.userId },
+    },
+    subscription: args.sessionId,
+  };
+  const res = await fetch(`${ROOT_API}/ambient`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`ambient submit failed: ${res.status}`);
+}
+
+/**
+ * GET /apps/app/users/{userId}/sessions/{sessionId} — the session's event list.
+ * Returns [] when the session doesn't exist yet (a brand-new campaign).
+ */
+export async function getSessionEvents(
+  sessionId: string,
+  userId: string,
+): Promise<RunEvent[]> {
+  const res = await fetch(
+    `${ROOT_API}/apps/${APP_NAME}/users/${encodeURIComponent(
+      userId,
+    )}/sessions/${encodeURIComponent(sessionId)}`,
+  );
+  if (!res.ok) return [];
+  const data = (await res.json()) as { events?: RunEvent[] };
+  return data.events ?? [];
+}
+
+/**
+ * POST /run — resolve a turn paused at the HITL gate. Sends the
+ * `adk_request_input` functionResponse; "approve" passes the gate, anything else
+ * (e.g. "reject") cancels the turn. Returns when the resumed run completes.
+ */
+export async function sendDecision(args: {
+  sessionId: string;
+  userId: string;
+  approved: boolean;
+}): Promise<void> {
+  const payload = {
+    app_name: APP_NAME,
+    user_id: args.userId,
+    session_id: args.sessionId,
+    new_message: {
+      role: "user",
+      parts: [
+        {
+          functionResponse: {
+            id: HITL_INTERRUPT_ID,
+            name: "adk_request_input",
+            response: { result: args.approved ? "approve" : "reject" },
+          },
+        },
+      ],
+    },
+  };
+  const res = await fetch(`${ROOT_API}/run`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`decision failed: ${res.status}`);
 }

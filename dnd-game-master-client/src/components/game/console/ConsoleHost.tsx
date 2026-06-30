@@ -1,0 +1,74 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useGame } from "@/context/GameContext";
+import { useCampaignHistory } from "@/hooks/useCampaignHistory";
+import { GAME_CATALOG } from "@/lib/games";
+import { ConsoleProvider } from "./ConsoleProvider";
+import { LayoutSwitcher } from "./LayoutSwitcher";
+import { DEFAULT_LAYOUT_ID, getLayout } from "./layouts";
+
+const LAYOUT_STORAGE_KEY = "dnd.console.layout";
+
+const newId = () =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `c-${Math.random().toString(36).slice(2)}`;
+
+/**
+ * Mounts the interactive console: derives the campaign id (new uuid vs resumed),
+ * loads its history, and renders the chosen layout around the shared provider.
+ */
+export function ConsoleHost() {
+  const { state: game } = useGame();
+
+  // A new campaign gets one fresh uuid for its lifetime; resume uses the saved id.
+  const newCampaignIdRef = useRef<string>("");
+  if (!newCampaignIdRef.current) newCampaignIdRef.current = newId();
+  const campaignId =
+    game.branch === "resume" ? game.selectedCampaignId : newCampaignIdRef.current;
+
+  const { history, progress, summary, loading, reload } = useCampaignHistory(campaignId);
+
+  // Layout choice, persisted. Start from the default so SSR and first client
+  // render match; hydrate the stored choice in an effect.
+  const [layoutId, setLayoutId] = useState<string>(DEFAULT_LAYOUT_ID);
+  useEffect(() => {
+    const stored = window.localStorage.getItem(LAYOUT_STORAGE_KEY);
+    if (stored) setLayoutId(stored);
+  }, []);
+  useEffect(() => {
+    window.localStorage.setItem(LAYOUT_STORAGE_KEY, layoutId);
+  }, [layoutId]);
+
+  const ActiveLayout = getLayout(layoutId).Component;
+
+  const title =
+    GAME_CATALOG.find((g) => g.id === game.selectedGameId)?.title ??
+    (game.branch === "resume" ? "Resumed campaign" : "New campaign");
+
+  return (
+    <div className="h-screen w-full px-3 pb-3 pt-14 sm:px-5 sm:pt-16">
+      <ConsoleProvider
+        campaignId={campaignId}
+        history={history}
+        historyLoading={loading}
+        progress={progress}
+        summary={summary}
+        reloadHistory={reload}
+      >
+        <div className="flex h-full flex-col gap-3">
+          <header className="flex shrink-0 items-center justify-between gap-3">
+            <h1 className="text-gilded font-display text-lg font-bold tracking-wide sm:text-xl">
+              {title}
+            </h1>
+            <LayoutSwitcher value={layoutId} onChange={setLayoutId} />
+          </header>
+          <div className="min-h-0 flex-1">
+            <ActiveLayout />
+          </div>
+        </div>
+      </ConsoleProvider>
+    </div>
+  );
+}

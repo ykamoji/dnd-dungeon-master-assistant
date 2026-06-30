@@ -88,8 +88,9 @@ export function GameStage() {
 
   const lastIndex = steps.length - 1;
 
-  // Up always works (at the start view it returns to the landing page).
-  const canGoUp = !dissolving && !assembling;
+  // Up works everywhere except the console, which is the terminal play screen
+  // (going "back" mid-game would drop the party/campaign selection).
+  const canGoUp = !dissolving && !assembling && currentStep !== "console";
   const canGoDown = (() => {
     if (dissolving || assembling || stepIndex >= lastIndex) return false;
     if (currentStep === "start") return branch !== null;

@@ -10,6 +10,8 @@ const BACKEND_PATHS = [
   "/state/:path*",
   "/health/:path*",
   "/run",
+  "/run_sse", // streamed event trace (SSE) for the live console
+  "/apps/:path*", // ADK session CRUD (create a session before /run)
   "/feedback",
   "/session/:path*",
 ];
@@ -23,10 +25,15 @@ const nextConfig = {
     ],
   },
   async rewrites() {
-    return BACKEND_PATHS.map((source) => ({
-      source,
-      destination: `${BACKEND_ORIGIN}${source}`,
-    }));
+    return [
+      ...BACKEND_PATHS.map((source) => ({
+        source,
+        destination: `${BACKEND_ORIGIN}${source}`,
+      })),
+      // The ambient Pub/Sub push handler lives at the backend root ("/"), which
+      // collides with the Next landing page — expose it under /ambient instead.
+      { source: "/ambient", destination: `${BACKEND_ORIGIN}/` },
+    ];
   },
 };
 

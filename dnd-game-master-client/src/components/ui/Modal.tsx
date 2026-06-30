@@ -1,7 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { type ReactNode } from "react";
+import { type ReactNode, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "./Button";
 
 interface ModalProps {
@@ -19,11 +20,18 @@ const SIZE: Record<NonNullable<ModalProps["size"]>, string> = {
 
 /** Themed popup dialog (used for "coming soon" campaigns + DNA profile). */
 export function Modal({ open, title, children, onClose, size = "md" }: ModalProps) {
-  return (
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -55,6 +63,7 @@ export function Modal({ open, title, children, onClose, size = "md" }: ModalProp
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
