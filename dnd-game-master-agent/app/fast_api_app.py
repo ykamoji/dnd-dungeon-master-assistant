@@ -79,11 +79,14 @@ app.description = "API for interacting with the Agent dnd-game-master-agent"
 
 from app.ambient import router as ambient_router
 from app.custom import router as custom_router
+from app.events import router as events_router
 from app.db import close_client
 
 app.include_router(custom_router)
 # Ambient entry point: Pub/Sub push events drive the workflow (no chat needed).
 app.include_router(ambient_router)
+# SSE Streaming endpoint for live UI
+app.include_router(events_router)
 
 @app.on_event("shutdown")
 def shutdown_event():

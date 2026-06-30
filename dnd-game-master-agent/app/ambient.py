@@ -136,3 +136,4 @@ async def pubsub_handler(request: Request):
         return Response(status_code=500)
 
     return {"status": "success"}
+
