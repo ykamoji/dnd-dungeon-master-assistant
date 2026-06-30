@@ -8,7 +8,7 @@ class CampaignMetadata(BaseModel):
     """Metadata for the current scene."""
     chapter: Optional[str] = Field(default=None, description="The current chapter of the adventure")
     section: Optional[str] = Field(default=None, description="The current section or location name")
-    asset_urls: List[str] = Field(default_factory=list, description="URLs to any visual assets for the scene")
+    assets: List[Dict] = Field(default_factory=list, description="Files and descriptions to any visual assets for the scene")
     gm_notes: Optional[str] = Field(default=None, description="Private GM notes for the current scene (key NPCs, threats, opportunities)")
     next_scene_suggestions: List[str] = Field(default_factory=list, description="Suggested next scenes or story directions")
     suggested_actions: List[str] = Field(default_factory=list, description="Suggested next actions offered to the player")
@@ -147,7 +147,7 @@ def update_campaign(
         progress: Optional completion percentage (0-100).
         scene: Title of the current scene. (Requires description, metadata, initiative, and party to append a turn)
         description: Natural language description of the current situation.
-        metadata: CampaignMetadata object containing chapter, section, asset_urls,
+        metadata: CampaignMetadata object containing chapter, section, assets,
                   gm_notes, next_scene_suggestions, and suggested_actions.
         initiative: Ordered list of characters in initiative order.
         party: PartyState object mapping character names to their hp, max_hp, and conditions.

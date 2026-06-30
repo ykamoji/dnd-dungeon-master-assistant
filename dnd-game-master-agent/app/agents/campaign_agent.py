@@ -38,7 +38,7 @@ campaign_executor = Agent(
     4. Once all parallel tool results are returned, build the scene framing from what get_campaign and story_agent returned. 
        Take chapter, section, and asset URLs from story_agent's result — do not invent them.
 
-    Return a single JSON object matching this sample schema (no prose outside the JSON):
+    Return a single JSON object matching this schema (no prose outside the JSON):
     {
       "narrative": "player-facing description of the current scene",
       "chapter": "from story_agent",
@@ -46,14 +46,14 @@ campaign_executor = Agent(
       "scene_summary": "short evocative title/summary",
       "gm_notes": "key NPCs present, threats, opportunities",
       "next_scene_suggestions": ["...", "...", "..."],
-      "asset_urls": ["from story_agent"],
-      "progress": 1.2,
-      "initiative": [],
-      "party": [],
+      "assets": [{URL: "from story_agent", description: "from story_agent"}, ...],
+      "progress": 0.1,
+      "initiative": ["...", "..."],
+      "party": [{"name": "str", "role": "str", "class": "str", "hp": int, "max_hp": int, "conditions": ["str"], "armors": ["str"], "spells": ["str"], "weapons": ["str"], "magicitems": ["str"]}],
       "suggested_actions": ["...", "...", "..."]
     }
 
-    Set `progress` value based on the chapter progression and scene (total 5 chapters). 
+    Set `progress` value based on the chapter progression and scene within the chapter (total 5 chapters). 
     Set `progress`, `initiative`, and `party` ONLY when this turn actually changed them; otherwise leave them 0, null, and empty, respectively so saved state is preserved.
     Never invent hp/max_hp. Be concise but vivid; include asset URLs when story_agent provides them.
 

@@ -75,7 +75,7 @@ async def run_tests():
                 campaign_id=cid,
                 scene="Smoke Test Scene 2",
                 description="Testing the API.",
-                metadata={"chapter": "test", "asset_urls": []},
+                metadata={"chapter": "test", "assets": []},
                 initiative=["Tester"],
                 party={"characters": {"Tester": {"hp": 10, "max_hp": 10, "conditions": []}}},
             )

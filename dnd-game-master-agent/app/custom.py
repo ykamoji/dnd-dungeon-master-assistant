@@ -155,7 +155,7 @@ def api_list_campaigns():
     for doc in cursor:
         latest = (doc.get("state") or [{}])[-1]
         metadata = latest.get("metadata") or {}
-        asset_urls = metadata.get("asset_urls") or latest.get("asset_urls") or []
+        assets = metadata.get("assets") or latest.get("assets") or []
         campaigns.append(
             {
                 "campaign_id": doc.get("campaign_id"),
@@ -164,7 +164,7 @@ def api_list_campaigns():
                 "progress": doc.get("progress"),
                 "updated_at": doc.get("updated_at"),
                 "scene": latest.get("scene", ""),
-                "cover_url": asset_urls[0] if asset_urls else None,
+                "cover_url": "https://raw.githubusercontent.com/5etools-mirror-3/5etools-img/main/adventure/ToA/" + assets[0]["URL"] if assets else None,
             }
         )
     return campaigns

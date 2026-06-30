@@ -57,11 +57,17 @@ AGENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # uses, so the Pub/Sub handler and the built-in /run resume endpoint share one
 # store: per-agent local SQLite (app/.adk/session.db) by default, or whatever
 # SESSION_SERVICE_URI points at in production.
+db_path = os.path.join(AGENT_DIR,  "app", ".adk", "session.db")
+local_db_url = f"sqlite:///{db_path}"
 _session_service = create_session_service_from_options(
     base_dir=AGENT_DIR,
-    session_service_uri=os.getenv("SESSION_SERVICE_URI"),
+    session_service_uri=local_db_url if os.getenv("SESSION_DB_LOCAL") else os.getenv("SESSION_SERVICE_URI"),
+    use_local_storage=os.getenv("SESSION_DB_LOCAL")
 )
-_runner = Runner(app=gm_app, session_service=_session_service)
+
+# app_name MUST be the ADK app name ("app") — the same name _ensure_session
+# creates sessions under and the built-in session/run endpoints + the client use.
+_runner = Runner(app=gm_app, session_service=_session_service, app_name=gm_app.name)
 
 router = APIRouter()
 
@@ -77,7 +83,7 @@ def short_subscription_name(subscription: str) -> str:
     return subscription.rsplit("/", 1)[-1]
 
 
-async def _ensure_session(user_id: str, session_id: str, campaign_id: str) -> None:
+async def _ensure_session(user_id: str, session_id: str) -> None:
     """Create the ADK session on first contact; reuse it on subsequent events."""
     session = await _session_service.get_session(
         app_name=gm_app.name, user_id=user_id, session_id=session_id
@@ -87,7 +93,6 @@ async def _ensure_session(user_id: str, session_id: str, campaign_id: str) -> No
             app_name=gm_app.name,
             user_id=user_id,
             session_id=session_id,
-            state={"campaign_id": campaign_id},
         )
 
 
@@ -107,11 +112,10 @@ async def pubsub_handler(request: Request):
     # Normalize the fully-qualified subscription path to a readable session id.
     session_id = short_subscription_name(envelope.get("subscription", ""))
     user_id = attributes.get("user_id", "user")
-    campaign_id = attributes.get("campaign_id", session_id)
 
     logger.info(
-        "Processing Pub/Sub message %s for session %s (campaign %s)",
-        message.get("messageId"), session_id, campaign_id,
+        "Processing Pub/Sub message %s for session %s",
+        message.get("messageId"), session_id,
     )
 
     # Pass the raw message dict into the workflow; the entry node decodes the
@@ -121,7 +125,7 @@ async def pubsub_handler(request: Request):
     )
 
     try:
-        await _ensure_session(user_id, session_id, campaign_id)
+        await _ensure_session(user_id, session_id)
         async for event in _runner.run_async(
             user_id=user_id, session_id=session_id, new_message=content_message
         ):

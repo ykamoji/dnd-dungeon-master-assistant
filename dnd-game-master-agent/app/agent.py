@@ -331,7 +331,7 @@ async def hitl_gate(ctx: Context, node_input: Any):
 # ===========================================================================
 
 root_agent = Workflow(
-    name="dnd_game_master",
+    name="dnd_game_master_agent",
     edges=[
         ("START", prepare),
         (prepare, {"safe": classifier, "blocked": refuse, "setup": setup_agent}),

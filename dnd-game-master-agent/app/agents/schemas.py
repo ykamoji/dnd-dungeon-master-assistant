@@ -35,6 +35,14 @@ class CharacterUpdate(BaseModel):
     weapons: list[str] = Field(default_factory=list, description="Weapons carried AFTER this turn; include only when known/changed, never invent")
     magicitems: list[str] = Field(default_factory=list, description="Magic items possessed AFTER this turn; include only when known/changed, never invent")
 
+class Assets(BaseModel):
+    """
+    Image assets that match the current scene.
+    """
+    URL: str = Field(description="URL of the asset (e.g., '004-0201.webp')")
+    description: str = Field(description="Description of the asset (e.g., 'Chapter 1: Port Nyanzaru')")
+    
+
 class StoryResult(BaseModel):
     """Structured lookup result returned by story_agent to the calling agents.
 
@@ -47,7 +55,7 @@ class StoryResult(BaseModel):
     section: str = Field(default="", description="Section/location/scene name within the chapter (e.g., 'Arrival')")
     source_path: str = Field(default="", description="Repo path of the markdown file the content was drawn from, for citation")
     content: str = Field(default="", description="Rich, detailed narrative excerpt synthesized from the module, written like a true D&D Game Master")
-    asset_urls: list[str] = Field(default_factory=list, description="Full image URLs (Base URL + File) for every matching scene/NPC/map image, or empty if none")
+    assets: list[Assets] = Field(default_factory=list, description="List of asset file and description for every matching chapter, map, scene, NPC")
 
 
 class SetupResult(BaseModel):
@@ -90,7 +98,7 @@ class CampaignResult(BaseModel):
     scene_summary: str = Field(default="", description="Short, evocative summary/title of the current location and situation")
     gm_notes: str = Field(default="", description="Private GM notes: key NPCs present, threats, opportunities")
     next_scene_suggestions: list[str] = Field(default_factory=list, description="2-3 suggested next scenes or story directions")
-    asset_urls: list[str] = Field(default_factory=list, description="Image URLs for the current scene, taken from story_agent")
+    assets: list[Assets] = Field(default_factory=list, description="List of asset file and description for every matching chapter, map, scene, NPC")
     progress: float | None = Field(default=None, description="Campaign completion percent (0-100); set ONLY if the campaign measurably advanced this turn, else null")
     initiative: list[str] = Field(default_factory=list, description="Combat turn order, only when in or entering combat; else empty")
     party: list[CharacterUpdate] = Field(default_factory=list, description="Per-character HP/conditions if known this turn; else empty. NEVER invent hp/max_hp")
@@ -117,7 +125,7 @@ class GMResponse(BaseModel):
     scene_summary: str = Field(default="", description="Summary of the current scene")
     gm_notes: str = Field(default="", description="Private GM notes")
     next_scene_suggestions: list[str] = Field(default_factory=list, description="Suggested next scenes")
-    asset_urls: list[str] = Field(default_factory=list, description="Image URLs for the current scene")
+    assets: list[Assets] = Field(default_factory=list, description="Asset file and description for every matching chapter, map, scene, NPC")
     # Persistable campaign state — fill ONLY when known. An empty list / null
     # means "unchanged this turn"; the persistence layer carries the previous
     # value forward rather than blanking it. Do not invent values you don't have.
