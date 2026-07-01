@@ -13,7 +13,7 @@ interface CarouselProps {
 /** Fade in/out image slideshow that auto-rotates. */
 export function Carousel({
   images,
-  intervalMs = 4500,
+  intervalMs = 8000,
   bordered = true,
   showDots = true,
 }: CarouselProps) {
@@ -30,9 +30,8 @@ export function Carousel({
 
   return (
     <div
-      className={`relative h-full w-full overflow-hidden bg-stone ${
-        bordered ? "rounded-card border border-gold/20" : ""
-      }`}
+      className={`relative h-full w-full overflow-hidden bg-stone ${bordered ? "rounded-card border border-gold/20" : ""
+        }`}
     >
       <AnimatePresence mode="sync">
         <motion.img
@@ -55,9 +54,8 @@ export function Carousel({
               key={i}
               aria-label={`Show slide ${i + 1}`}
               onClick={() => setIndex(i)}
-              className={`h-1.5 rounded-full transition-all ${
-                i === index ? "w-6 bg-gold" : "w-1.5 bg-parchment-dim/50"
-              }`}
+              className={`h-1.5 rounded-full transition-all ${i === index ? "w-6 bg-gold" : "w-1.5 bg-parchment-dim/50"
+                }`}
             />
           ))}
         </div>

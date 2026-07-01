@@ -12,7 +12,7 @@ export function Hero() {
         transition={{ duration: 0.6 }}
         className="font-rune text-sm uppercase tracking-[0.4em] text-gold"
       >
-        Roll for initiative
+        Roll the dice to an epic adventure
       </motion.p>
 
       <motion.h1
@@ -28,23 +28,26 @@ export function Hero() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8, delay: 0.2 }}
-        className="mt-6 max-w-2xl font-rune text-lg leading-relaxed text-parchment-dim sm:text-xl"
+        className="mt-6 max-w-3xl font-rune text-lg leading-relaxed bg-obsidian/80 p-5 text-parchment-dim sm:text-xl"
       >
         An ever-watchful AI Dungeon Master for your table. It weaves the
         narrative, voices every NPC, arbitrates the dice, and remembers your saga
         — so you can simply <span className="text-gold-bright">play</span>.
       </motion.p>
 
-      <motion.div
+      <motion.button
+        onClick={() => {
+          document.getElementById("how-to-play")?.scrollIntoView({ behavior: "smooth" });
+        }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1, y: [0, 8, 0] }}
         transition={{
           opacity: { duration: 0.6, delay: 0.5 },
           y: { duration: 1.8, repeat: Infinity, ease: "easeInOut" },
         }}
-        className="mt-14 flex flex-col items-center gap-2 text-parchment-dim"
+        className="mt-14 flex flex-col items-center gap-2 cursor-pointer text-parchment-dim transition-colors hover:text-gold focus:outline-none"
       >
-        <span className="font-rune text-xs uppercase tracking-[0.3em]">
+        <span className="font-rune text-[30px] font-extrabold uppercase tracking-[0.3em]">
           Scroll to learn how to play
         </span>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -56,7 +59,10 @@ export function Hero() {
             strokeLinejoin="round"
           />
         </svg>
-      </motion.div>
+        <div className="mt-16 text-center font-rune text-lg tracking-widest text-parchment-dim">
+          D&amp;D Game Master Assistant
+        </div>
+      </motion.button>
     </div>
   );
 }

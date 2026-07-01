@@ -21,7 +21,7 @@ export function SectionShell({
 }: SectionShellProps) {
   return (
     <section
-      className={`flex h-screen w-full shrink-0 flex-col items-center px-6 py-16 ${
+      className={`flex h-screen w-full shrink-0 flex-col items-center overflow-y-auto overflow-x-hidden px-6 py-16 ${
         align === "start" ? "justify-start" : "justify-center"
       } ${className}`}
     >

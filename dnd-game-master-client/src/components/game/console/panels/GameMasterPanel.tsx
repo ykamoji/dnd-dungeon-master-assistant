@@ -22,8 +22,6 @@ export function GameMasterPanel({ orientation = "hero" }: GameMasterPanelProps) 
     composerDraft,
     error,
     submitTurn,
-    approve,
-    reject,
     setComposerDraft,
   } = useConsole();
 
@@ -36,7 +34,17 @@ export function GameMasterPanel({ orientation = "hero" }: GameMasterPanelProps) 
   const awaiting = runStatus === "awaiting_approval";
 
   const handleSubmit = () => {
-    submitTurn({ text: composerDraft, dice: rolls });
+    let finalDraft = composerDraft;
+
+    if (rolls.d20 !== null && rolls.d100 !== null) {
+      finalDraft = ` d20 dice roll : ${rolls.d20}, d100 dice roll : ${rolls.d100}. ${composerDraft}`;
+    } else if (rolls.d20 !== null) {
+      finalDraft = `d20 dice roll : ${rolls.d20}. ${composerDraft}`;
+    } else if (rolls.d100 !== null) {
+      finalDraft = `d100 dice roll : ${rolls.d100}. ${composerDraft}`;
+    }
+
+    submitTurn({ text: finalDraft, dice: rolls });
     setComposerDraft("");
     setRolls(NO_ROLLS);
   };
@@ -54,7 +62,7 @@ export function GameMasterPanel({ orientation = "hero" }: GameMasterPanelProps) 
       )}
 
       <div className={`flex ${orientation === "vertical" ? "flex-col" : "flex-row"} items-center gap-3 space-y-3`}>
-        < DiceTray rolls={rolls} onRoll={setRolls} disabled={busy} />
+        <DiceTray rolls={rolls} onRoll={setRolls} disabled={busy} />
         <CommandComposer
           value={composerDraft}
           onChange={setComposerDraft}

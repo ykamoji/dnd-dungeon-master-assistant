@@ -9,20 +9,20 @@ const TOA_MIRROR =
 
 export const GAME_CATALOG: GameCatalogEntry[] = [
   {
-    id: "tomb-of-annihilation",
-    title: "Tomb of Annihilation",
-    blurb:
-      "A death curse withers the resurrected. Brave the jungles of Chult to find its source in the Tomb of the Nine Gods.",
-    coverUrl: `${TOA_MIRROR}/004-0201.webp`,
-    available: true,
-  },
-  {
     id: "castle-ravenloft",
     title: "Castle Ravenloft",
     blurb:
       "Trapped in the mist-shrouded land of Barovia, you must end the reign of the vampire lord Strahd von Zarovich.",
     coverUrl: "/placeholders/ravenloft.svg",
     available: false,
+  },
+  {
+    id: "tomb-of-annihilation",
+    title: "Tomb of Annihilation",
+    blurb:
+      "A death curse withers the resurrected. Brave the jungles of Chult to find its source in the Tomb of the Nine Gods.",
+    coverUrl: `${TOA_MIRROR}/004-0201.webp`,
+    available: true,
   },
   {
     id: "wrath-of-ashardalon",
@@ -47,6 +47,6 @@ export const PRELOAD_PARTY: Omit<PartyMember, "id">[] = [
 export const LANDING_STILLS: { src: string; alt: string }[] = [
   { src: `${TOA_MIRROR}/004-0201.webp`, alt: "Port Nyanzaru harbor" },
   { src: `${TOA_MIRROR}/064-501.webp`, alt: "Tomb of the Nine Gods" },
-  { src: "/placeholders/still-1.svg", alt: "A torch-lit dungeon corridor" },
-  { src: "/placeholders/still-2.svg", alt: "Dice and a worn map" },
+  { src: `${TOA_MIRROR}/027-0308.webp`, alt: "Firefinger" },
+  { src: `${TOA_MIRROR}/060-401.webp`, alt: "Fane of the Night Serpent" },
 ];
