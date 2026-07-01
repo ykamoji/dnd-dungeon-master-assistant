@@ -42,16 +42,49 @@ Views (each owns its own local state; shared flow state is in context):
   playable; others open a "coming soon" `Modal`. Selecting ToA fades to party.
 - `PartySelectView` — `PartyMemberRow`s (name input, class `<select>` from
   `useClasses`, role `<select>` = the class's archetypes). `ClassDnaProfile`
-  modal shows the class "DNA sheet". "Preload Best Party" loads the 5 presets
-  from `PRELOAD_PARTY`. Confirm → `START_DISSOLVE`.
+  panel shows the class "DNA sheet". "Preload Best Party" loads the 5 presets
+  from `PRELOAD_PARTY`. Confirm → `BEGIN_NEW_CAMPAIGN` (mints the `campaignId`,
+  starts the dissolve, and auto-fires the first turn — see the console below).
 - `ResumeView` — `useCampaigns()` list of saved games as cards. Select →
-  `START_DISSOLVE`.
-- `ConsoleView` — **intentionally an empty themed placeholder** (the interactive
-  game console is a later task).
+  `SELECT_CAMPAIGN` (sets `campaignId`) + `START_DISSOLVE`.
+- `ConsoleView` — the **interactive play console** (see "The console" below).
 
 Transitions: campaign→party is a fade; party→console and resume→console use the
 **`DissolveOverlay`** (`useDissolve` hook) — snapshot → particle drift → on
 complete `FINISH_DISSOLVE` jumps to the console step.
+
+### The console (`src/components/game/console/`)
+The play screen. `ConsoleView` → `ConsoleHost` → **`ConsoleProvider`** (owns ALL
+run state via `useConsole`) → a swappable **layout** arranging three **panels**.
+Every layout exposes identical features — feature logic lives in the panels /
+provider, not the layouts.
+
+- **Layouts** (`layouts/`, registry in `index.ts`; `LayoutSwitcher` dropdown,
+  persisted to localStorage): `SceneCenterLayout`, `ThreeColumnLayout`,
+  `MapHeroLayout`. Add one by appending to the registry.
+- **Panels** (`panels/`): `JourneyMapPanel` (turn trail), `SceneReaderPanel`
+  (shows the active turn snapshot, or the live `EventTimeline` / pending draft
+  while a turn is in flight), `GameMasterPanel` (dice + command composer +
+  approval bar).
+- **Parts** (`parts/`): `EventTimeline` (+ `EventDetail`), `TrailNode`,
+  `DiceTray`, `CommandComposer`, `ApprovalBar`, `AssetGallery`, `PartyStatGrid`.
+  Helpers: `events.ts` (SessionEvent → icon/title, approval detection),
+  `snapshot.ts`, `scroll.ts`.
+
+**Run lifecycle** (in `ConsoleProvider`; `sessionId == campaignId`):
+1. **Submit** — `POST /ambient` (Pub/Sub-style push: `subscription` = campaignId,
+   `data` = raw JSON `{action}` for a normal turn, `{game, party}` for the first
+   turn). `BEGIN_NEW_CAMPAIGN` (Confirm & Begin) mints `campaignId` in
+   `GameContext` and the provider auto-fires that first (setup) turn.
+2. **Trace + HITL** — the provider opens an `EventSource` on
+   `GET /ambient/sessions/{id}/stream`; each frame is a `SessionEvent` rendered on
+   the vertical `EventTimeline`. When an `adk_request_input` event arrives it
+   surfaces the draft (approval bar) and closes the stream.
+3. **Decide** — `POST /run` with a `functionResponse` (`sendDecision`, result
+   `approve`/`reject`); completion reloads campaign history (`useCampaignHistory`).
+
+`campaignId` lives in `GameContext` (minted on `BEGIN_NEW_CAMPAIGN`, or the saved
+id on `SELECT_CAMPAIGN` for resume) so the submit and the SSE stream share one id.
 
 ## Conventions (follow these)
 - **Theme tokens only** — colors/fonts come from `globals.css` `@theme`
@@ -70,10 +103,17 @@ complete `FINISH_DISSOLVE` jumps to the console step.
   `src/lib/games.ts`.
 
 ## Backend integration
-Proxied routes (see `next.config.mjs`): `/tools/*`, `/campaigns`,
-`/campaign/*`, `/state/*`, `/health/*`, `/run`, `/feedback`, `/session/*`.
-Key calls: `GET /tools/classes` (class DNA profiles → party builder),
-`GET /campaigns` (saved-game summaries → resume list).
+Proxied routes (see `next.config.mjs`): `/tools/*`, `/campaigns`, `/campaign/*`,
+`/state/*`, `/health/*`, `/run`, `/run_sse`, `/apps/*`, `/feedback`, `/session/*`,
+`/ambient` (→ backend `/`) and `/ambient/:path*` (the event SSE).
+Key `lib/api.ts` calls: `getClasses` (party builder), `getCampaigns` (resume
+list), `getCampaign(id, includeHistory)` (turn history), `submitTurn` (ambient
+push), `sessionStreamUrl` (SSE), `sendDecision` (`/run` HITL approve/reject).
+`APP_NAME="app"` and `HITL_INTERRUPT_ID="hitl_approval"` must match the backend.
+
+**Ambient `data` payload**: sent as a **raw JSON object** (not base64). Real GCP
+Pub/Sub needs base64, but this local bridge posts straight to the ambient
+handler, whose `_extract_player_action` accepts an object directly.
 
 ## Gotchas (learned the hard way)
 - **Next config must be `.mjs`, not `.ts`** here: `next dev` in this version
@@ -90,8 +130,11 @@ src/app/        layout.tsx (fonts), globals.css (theme), page.tsx, game/page.tsx
 src/components/ui/      reusable primitives
 src/components/landing/ Hero, HowToPlay, StillsCarousel
 src/components/game/    GameStage + the five views + ClassDnaProfile/PartyMemberRow
-src/context/    GameContext.tsx (reducer + provider + step machine)
-src/hooks/      useClasses, useCampaigns, useDissolve
-src/lib/        api.ts (ROOT_API=""), types.ts, games.ts (catalog + presets)
+src/components/game/console/  ConsoleHost/Provider + LayoutSwitcher, layouts/,
+                              panels/, parts/, events.ts, snapshot.ts, scroll.ts
+src/context/    GameContext.tsx (reducer + provider + step machine; holds
+                campaignId + autoStart for the console)
+src/hooks/      useClasses, useCampaigns, useCampaignHistory, useDissolve, useAssemble
+src/lib/        api.ts (ROOT_API=""), types.ts (incl. SessionEvent), games.ts
 public/placeholders/   SVG placeholder art
 ```

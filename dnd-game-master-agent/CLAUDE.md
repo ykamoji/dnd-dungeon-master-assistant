@@ -58,11 +58,27 @@ specialist in isolation MUST seed `campaign_state` or ADK raises KeyError.
   - `POST /tools/fetch_campaign_files` — adventure **markdown docs** (NOT campaigns).
   - `GET /tools/lookup_character/{name}`, `GET /tools/lookup_character_resource/{type}/{name}`,
     `POST /tools/get_asset_url`, `GET /health/db`, `DELETE /session/{id}` (rewind).
-- `app/ambient.py` (router) — `POST /` Pub/Sub push handler (event-driven mode):
-  normalizes the subscription path to a short, readable `session_id`, feeds the
-  message into the workflow via a `Runner`. HITL resumes through the built-in
-  `/run`. Shares the session store with the server via
-  `create_session_service_from_options`.
+- `app/ambient.py` (router) — the event-driven entry the **web client** drives:
+  - `POST /` Pub/Sub push handler: `session_id = short_subscription_name(subscription)`
+    (the client sets `subscription` = campaign_id, so **session_id == campaign_id**),
+    `_ensure_session` creates it if new, then feeds the message into the workflow via
+    a module-level `Runner`. The runner's `app_name` **MUST** be `gm_app.name`
+    (`"app"`) — the same name `_ensure_session` and the built-in endpoints use, or
+    `run_async` raises `SessionNotFoundError`. `_extract_player_action` accepts the
+    payload `data` as base64 **or a raw JSON object**; the first turn carries
+    `{game, party}`, later turns `{action}`.
+  - `GET /ambient/sessions/{session_id}/stream` — **SSE** trace endpoint the client
+    consumes (instead of polling). Reads the latest invocation's events from
+    `session.db` and yields `SessionEvent` frames (`data: {json}\n\n`, snake_case:
+    `content.parts[].{text,thought,function_call,function_response}`,
+    `actions.state_delta`). The generator loops forever; the **client** closes the
+    stream (e.g. on the `adk_request_input` approval event).
+  - HITL approve/reject: client `POST /run` with a `functionResponse`
+    (`name="adk_request_input"`, `response={result: "approve"|"reject"}`); the gate
+    reads `response` **or** `result` and checks `_APPROVE_WORDS`.
+  - Shares the session store with the server via `create_session_service_from_options`
+    (local `app/.adk/session.db` by default). Keep `SESSION_SERVICE_URI` (prod) or
+    `SESSION_DB_LOCAL` consistent so ambient writes and the client reads hit one DB.
 
 ## Sessions vs campaigns (important)
 - **Campaigns** = durable game state in **MongoDB** (`app/db.py` →

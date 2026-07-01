@@ -65,7 +65,8 @@ dnd-game-master-agent/
 │   ├── custom.py             REST router: /tools/classes, /campaigns,
 │   │                         /campaign/*, /state/*, /tools/* lookups, /health/db,
 │   │                         DELETE /session/{id} (rewind)
-│   ├── ambient.py            POST / Pub/Sub push handler (event-driven mode)
+│   ├── ambient.py            POST / Pub/Sub push handler + GET
+│   │                         /ambient/sessions/{id}/stream (SSE trace the client uses)
 │   ├── db.py                 MongoDB client + get_campaigns_col()
 │   ├── agents/               the agent definitions:
 │   │   ├── supervisor_agent.py   classifier (intent routing)
@@ -106,7 +107,10 @@ dnd-game-master-agent/
   (per-run trace) live in **local SQLite** `app/.adk/session.db`.
 - `classes.json` is at **`data/open5e/`**, NOT `app/data/`.
 - HITL gate uses fixed `interrupt_id="hitl_approval"`; resume via `/run` with a
-  `functionResponse` (`name="adk_request_input"`).
+  `functionResponse` (`name="adk_request_input"`, `response={result:…}`).
+- The client drives the game through **ambient**: `POST /ambient` (submit) +
+  `GET /ambient/sessions/{id}/stream` (SSE trace) + `/run` (approve/reject). The
+  Pub/Sub `subscription` is the campaign_id, so **session_id == campaign_id**.
 - To debug *what an agent actually did* at runtime, use `scripts/dump_session_trace.py`
   / the `session-trace-analysis` skill (reads session.db) — MongoDB only has
   final state.
@@ -133,9 +137,11 @@ dnd-game-master-client/
     │   ├── landing/          Hero, HowToPlay, StillsCarousel
     │   └── game/             GameStage + views (StartChoice, CampaignSelect,
     │                         PartySelect, Resume, Console) + ClassDnaProfile,
-    │                         PartyMemberRow
-    ├── context/              GameContext.tsx (useReducer step machine + provider)
-    ├── hooks/                useClasses, useCampaigns, useDissolve
+    │                         PartyMemberRow, and console/ (the play screen:
+    │                         ConsoleHost/Provider, layouts/, panels/, parts/)
+    ├── context/              GameContext.tsx (step machine + campaignId/autoStart)
+    ├── hooks/                useClasses, useCampaigns, useCampaignHistory,
+    │                         useDissolve, useAssemble
     └── lib/                  api.ts (ROOT_API="" + all calls), types.ts,
                               games.ts (campaign catalog + PRELOAD_PARTY)
 ```
@@ -143,8 +149,10 @@ dnd-game-master-client/
 **Game flow** (scroll-locked, corner nav): `start → campaignSelect → partySelect →
 console` (new) or `start → resumeLoad → console` (resume). Transitions:
 campaign→party is a fade; party/resume→console use the `DissolveOverlay`
-("sand blowing" particle effect via html2canvas-pro). `ConsoleView` is an
-intentional empty placeholder for now.
+("sand blowing" particle effect via html2canvas-pro). `ConsoleView` is the full
+interactive console (swappable layouts; SSE event timeline; HITL approval) —
+**Confirm & Begin** auto-fires the first turn with the assembled party. See the
+client's `CLAUDE.md` for the console architecture + run lifecycle.
 
 **Conventions:** theme tokens only (no ad-hoc colors); all fetching via hooks →
 `lib/api.ts`; reuse `components/ui/*`.
