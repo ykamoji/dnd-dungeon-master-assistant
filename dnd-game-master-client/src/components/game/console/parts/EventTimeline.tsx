@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import type { SessionEvent } from "@/lib/types";
@@ -12,20 +12,46 @@ interface EventTimelineProps {
   running: boolean;
 }
 
+/** A single event waypoint box — icon + step title; opens its detail on click. */
+function EventBox({
+  icon,
+  title,
+  active,
+  onClick,
+}: {
+  icon: string;
+  title: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className={`flex max-w-[11rem] items-center gap-2 rounded-card border px-4 py-2 text-left transition-colors ${active
+        ? "border-gold bg-gold/15"
+        : "border-stone-2 bg-obsidian-2/80 hover:border-gold/50"
+        }`}
+    >
+      <span className="text-base leading-none" aria-hidden>
+        {icon}
+      </span>
+      <span className="line-clamp-2 font-display text-[10px] uppercase tracking-wider text-parchment">
+        {title}
+      </span>
+    </button>
+  );
+}
+
 /**
- * Progressive horizontal timeline of the agent's run: one dot per
- * streamed event with its step icon + title above, dots joined by a rail. Click
- * a dot to slide open that event's details — only one open at a time.
+ * Vertical timeline of the agent's run: a central rail with event boxes
+ * alternating left / right, piling downward as events stream in. Each box shows
+ * its step icon + title and opens the full Event Detail modal on click. The run
+ * fits within its container without scrolling.
  */
 export function EventTimeline({ events, running }: EventTimelineProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const railRef = useRef<HTMLDivElement | null>(null);
-
-  // Keep the newest dot in view as the run streams in.
-  useEffect(() => {
-    if (railRef.current) railRef.current.scrollLeft = railRef.current.scrollWidth;
-  }, [events.length]);
-
   const selected = events.find((e) => e.id === selectedId) ?? null;
 
   if (events.length === 0) {
@@ -39,40 +65,54 @@ export function EventTimeline({ events, running }: EventTimelineProps) {
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div ref={railRef} className="scroll-thin overflow-y-auto">
-        <div className="flex flex-wrap items-stretch justify-start gap-y-6">
-          {events.map((ev, i) => {
-            const { icon, title } = eventStep(ev);
-            const active = ev.id === selectedId;
-            const isNewest = i === events.length - 1;
-            return (
-              <div key={ev.id} className="flex w-28 shrink-0 flex-col items-center">
-                {/* Step label + icon above the dot. */}
-                <span className="mb-1 line-clamp-1 text-center font-display text-[9px] uppercase tracking-wider text-parchment-dim">
-                  {title}
-                </span>
-                <span className="mb-1 text-lg leading-none" aria-hidden>
-                  {icon}
-                </span>
-                {/* Rail line + dot (adjacent rails join into one line). */}
-                <div className="relative flex h-4 w-full items-center justify-center">
-                  <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-stone-2" />
-                  <button
-                    type="button"
-                    onClick={() => setSelectedId(active ? null : ev.id)}
-                    aria-label={`${title} — toggle details`}
-                    className={`relative z-10 h-3.5 w-3.5 rounded-full border-2 transition-colors ${active
-                      ? "border-gold-bright bg-gold"
-                      : "border-stone-2 bg-stone hover:border-gold/60"
-                      } ${isNewest && running ? "animate-pulse" : ""}`}
+    <div className="flex h-full flex-col">
+      <ol className="relative flex h-full flex-col justify-around py-1">
+        {/* Central rail. */}
+        <span className="pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-gradient-to-b from-gold/40 via-stone-2 to-transparent" />
+
+        {events.map((ev, i) => {
+          const { icon, title } = eventStep(ev);
+          const active = ev.id === selectedId;
+          const isNewest = i === events.length - 1;
+          const left = i % 2 === 0;
+          return (
+            <li key={ev.id} className="relative grid grid-cols-2 items-center">
+              {/* Thin horizontal connector from the rail to the box. */}
+              <span
+                className={`pointer-events-none absolute top-1/2 h-px w-6 -translate-y-1/2 bg-stone-2 ${left ? "right-1/2" : "left-1/2"
+                  }`}
+              />
+              {/* Dot on the rail. */}
+              <span
+                className={`absolute left-1/2 top-1/2 z-10 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 ${isNewest ? "border-gold-bright bg-gold" : "border-stone-2 bg-stone"
+                  } ${isNewest ? "animate-ping" : ""}`}
+              />
+
+              {/* Left cell holds even-index events; right cell the odd ones. */}
+              <div className="flex justify-end pr-6">
+                {left && (
+                  <EventBox
+                    icon={icon}
+                    title={title}
+                    active={active}
+                    onClick={() => setSelectedId(ev.id)}
                   />
-                </div>
+                )}
               </div>
-            );
-          })}
-        </div>
-      </div>
+              <div className="flex justify-start pl-6">
+                {!left && (
+                  <EventBox
+                    icon={icon}
+                    title={title}
+                    active={active}
+                    onClick={() => setSelectedId(ev.id)}
+                  />
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
 
       {/* One event's details at a time, displayed as a hovering modal. */}
       {typeof document !== "undefined" && createPortal(
