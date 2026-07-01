@@ -70,6 +70,17 @@ class SetupResult(BaseModel):
     ready: bool = Field(default=False, description="True ONLY when a campaign name AND every party member's name, role, and class are present")
     message: str = Field(default="", description="If not ready: exactly what the player must still provide. If ready: a short confirmation that the adventure can begin")
     party: list[CharacterUpdate] = Field(default_factory=list, description="One entry per party member with class-derived hp = max_hp, weapons, and armors; empty when not ready")
+    narrative: str = Field(description="Player-facing description of the current scene and situation")
+    chapter: str = Field(default="", description="Current chapter name, taken from story_agent")
+    section: str = Field(default="", description="Current section/location name, taken from story_agent")
+    scene_summary: str = Field(default="", description="Short, evocative summary/title of the current location and situation")
+    gm_notes: str = Field(default="", description="Private GM notes: key NPCs present, threats, opportunities")
+    next_scene_suggestions: list[str] = Field(default_factory=list, description="2-3 suggested next scenes or story directions")
+    assets: list[Assets] = Field(default_factory=list, description="List of asset file and description for every matching chapter, map, scene, NPC")
+    progress: float | None = Field(default=None, description="Campaign completion percent (0-100); set ONLY if the campaign measurably advanced this turn, else null")
+    initiative: list[str] = Field(default_factory=list, description="Combat turn order, only when in or entering combat; else empty")
+    suggested_actions: list[str] = Field(default_factory=list, description="2-3 concrete next moves for the player")
+
 
 
 class ActionResult(BaseModel):
@@ -101,7 +112,6 @@ class CampaignResult(BaseModel):
     assets: list[Assets] = Field(default_factory=list, description="List of asset file and description for every matching chapter, map, scene, NPC")
     progress: float | None = Field(default=None, description="Campaign completion percent (0-100); set ONLY if the campaign measurably advanced this turn, else null")
     initiative: list[str] = Field(default_factory=list, description="Combat turn order, only when in or entering combat; else empty")
-    party: list[CharacterUpdate] = Field(default_factory=list, description="Per-character HP/conditions if known this turn; else empty. NEVER invent hp/max_hp")
     suggested_actions: list[str] = Field(default_factory=list, description="2-3 concrete next moves for the player")
 
 

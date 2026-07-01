@@ -9,13 +9,11 @@ const agentMap = new Map<string, string>([
   ["campaign_executor", "Campaign"]
 ]);
 
-/** True if this event is the workflow pausing for human approval (HITL gate). */
 export function isApprovalEvent(ev: SessionEvent): boolean {
   return parts(ev).some(
     (p) =>
       p.function_call?.name === "adk_request_input" ||
-      p.function_call?.name === HITL_INTERRUPT_ID ||
-      p.function_response?.name === "adk_request_input",
+      p.function_call?.name === HITL_INTERRUPT_ID,
   );
 }
 

@@ -13,7 +13,7 @@ from app.agents.callbacks import (
 )
 from app.agents.schemas import CampaignResult
 from app.agents.story_agent import story_tool
-from app.tools.campaign import get_campaign
+from app.tools.campaign import get_state
 from app.agents.evaluator_judge import evaluate_draft_semantically
 
 campaign_executor = Agent(
@@ -31,11 +31,11 @@ campaign_executor = Agent(
     Previous feedback (if retrying — fix exactly this): {eval_feedback}
 
     Procedure:
-    1. Call get_campaign (use the Campaign ID above) to load the saved scene, progress, party, and initiative.
+    1. Call `get_state` (use the Campaign ID above) to load the saved scene, progress, party, and initiative.
     2. Call story_agent to pull the relevant chapter/scene content and its asset URL. Ask ONLY about game lore using location / NPC / chapter / scene NAMES (e.g. "the arrival scene in Port Nyanzaru").
        NEVER pass the Campaign ID, session ID, or player state — story_agent only knows module content and cannot resolve IDs.
-    3. Call `get_campaign` and `story_agent` simultaneously. Issue both tool calls in a single, parallel batch. Do not look them up one by one.
-    4. Once all parallel tool results are returned, build the scene framing from what get_campaign and story_agent returned. 
+    3. Call `get_state` and `story_agent` simultaneously. Issue both tool calls in a single, parallel batch. Do not look them up one by one.
+    4. Once all parallel tool results are returned, build the scene framing from what `get_state` and `story_agent` returned. 
        Take chapter, section, and asset URLs from story_agent's result — do not invent them.
 
     Return a single JSON object matching this schema (no prose outside the JSON):
@@ -49,7 +49,6 @@ campaign_executor = Agent(
       "assets": [{URL: "from story_agent", description: "from story_agent"}, ...],
       "progress": 0.1,
       "initiative": ["...", "..."],
-      "party": [{"name": "str", "role": "str", "class": "str", "hp": int, "max_hp": int, "conditions": ["str"], "armors": ["str"], "spells": ["str"], "weapons": ["str"], "magicitems": ["str"]}],
       "suggested_actions": ["...", "...", "..."]
     }
 
@@ -58,13 +57,13 @@ campaign_executor = Agent(
     Never invent hp/max_hp. Be concise but vivid; include asset URLs when story_agent provides them.
 
     MANDATORY TOOL USE: You do NOT know the saved state or scene content until the tool ACTUALLY returns it. NEVER simulate, assume, pretend, or imagine a tool result — phrases like "(simulated)" or "assuming this returns…" are forbidden.
-    Issue the real get_campaign and story_agent calls and wait for their responses before framing the scene. Take chapter/section/asset URLs from story_agent's real output; if it returns nothing, say so in `narrative` instead of inventing lore.
+    Issue the real `get_state` and `story_agent` calls and wait for their responses before framing the scene. Take chapter/section/asset URLs from story_agent's real output; if it returns nothing, say so in `narrative` instead of inventing lore.
 
     CRITICAL: ALWAYS return the JSON object and nothing else — no prose before or after it. 
     If campaign state is missing or you would ask the player a question, put that text in `narrative` and leave the unknown fields at their defaults.
     Never reply with a plain-text message.""",
     tools=[
-        FunctionTool(get_campaign),
+        FunctionTool(get_state),
         story_tool,
     ],
     output_schema=None if USE_LOCAL_LLM else CampaignResult,

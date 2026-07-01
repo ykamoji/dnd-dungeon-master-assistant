@@ -34,17 +34,7 @@ export function GameMasterPanel({ orientation = "hero" }: GameMasterPanelProps) 
   const awaiting = runStatus === "awaiting_approval";
 
   const handleSubmit = () => {
-    let finalDraft = composerDraft;
-
-    if (rolls.d20 !== null && rolls.d100 !== null) {
-      finalDraft = ` d20 dice roll : ${rolls.d20}, d100 dice roll : ${rolls.d100}. ${composerDraft}`;
-    } else if (rolls.d20 !== null) {
-      finalDraft = `d20 dice roll : ${rolls.d20}. ${composerDraft}`;
-    } else if (rolls.d100 !== null) {
-      finalDraft = `d100 dice roll : ${rolls.d100}. ${composerDraft}`;
-    }
-
-    submitTurn({ text: finalDraft, dice: rolls });
+    submitTurn({ text: composerDraft, dice: rolls });
     setComposerDraft("");
     setRolls(NO_ROLLS);
   };

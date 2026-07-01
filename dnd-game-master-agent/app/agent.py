@@ -41,6 +41,7 @@ State contract (unchanged):
 - state.gm_response: final formatted output
 """
 
+from app.tools.campaign import CampaignMetadata
 import base64
 import binascii
 import json
@@ -248,10 +249,25 @@ def setup_finalize(ctx: Context, node_input: Any) -> Event:
             m["hp"] = m["max_hp"]
     party = _build_party_state(members, PartyState, CharacterState)
 
+    metadata = CampaignMetadata(
+        chapter=result.get("chapter") or 'chapter',
+        section=result.get("section") or 'section',
+        assets=result.get("assets") or [],
+        gm_notes=result.get("gm_notes") or '',
+        next_scene_suggestions=result.get("next_scene_suggestions") or [],
+        suggested_actions=result.get("suggested_actions") or [],
+    ) 
+
     update_campaign(
         campaign_id=campaign_id,
         campaign_name=campaign_name,
         party=party,
+        progress=result.get("progress") or '0.1',
+        narrative=result.get("narrative") or 'The campaign begins not in a grand dungeon...',
+        summary=result.get("scene_summary") or 'Yet to uncover',
+        scene=result.get("scene_summary") or 'Yet to uncover',
+        initiative=result.get("initiative") or 'Initiated',
+        metadata=metadata,
         intent="SETUP",
     )
 

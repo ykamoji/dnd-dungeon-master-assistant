@@ -49,17 +49,14 @@ output_agent = Agent(
     }
 
     Rules:
-    - For ACTION intent: fill narrative, combat_log, math_breakdown, suggested_actions
-    - For NPC_DIALOGUE intent: fill narrative, npc_name, dialogue, suggested_actions
-    - For CAMPAIGN intent: fill narrative, chapter, section, scene_summary, gm_notes, next_scene_suggestions, assets
+    - For ACTION intent: fill ONLY party, narrative, combat_log, math_breakdown, suggested_actions
+    - For NPC_DIALOGUE intent: fill ONLY narrative, npc_name, dialogue, suggested_actions
+    - For CAMPAIGN intent: fill ONLY narrative, chapter, section, scene_summary, gm_notes, next_scene_suggestions, requires_roll, assets
     - ALWAYS include last_agent and tools_fired for observability
     - ALWAYS include suggested_actions (2-3 choices for the player)
     - Set requires_roll=true if the next suggested action likely needs a dice roll
 
-    Campaign state fields (progress, initiative, party) are persisted to the database. They reflect the CANONICAL game state, so accuracy matters more than completeness:
-    - party: list every character whose hp/conditions are known from the specialist result, carrying forward unchanged characters and applying any damage/healing/conditions from this turn. 
-      Carry through each character's role, class, and armors/spells/weapons/magicitems from the specialist result as-is. 
-      NEVER invent hp, max_hp, role, class, or gear you were not given — omit a character entirely rather than guess.
+    Campaign state fields (progress, initiative) are persisted to the database. They reflect the CANONICAL game state, so accuracy matters more than completeness:
     - initiative: include the combat turn order only when in or entering combat.
     - progress: set only when the campaign has measurably advanced.
     - Leave any of these empty/null when this turn did not change them; the previous value is preserved automatically.

@@ -175,7 +175,7 @@ function formatDice(dice?: DiceRolls): string {
 // connection can drop the response long before the backend is done — but the
 // backend keeps working and the SSE keeps streaming. This is how long we keep
 // watching for the real outcome before giving up.
-const OUTCOME_GRACE_MS = 90_000;
+const OUTCOME_GRACE_MS = 120_000;
 const OUTCOME_RECHECK_MS = 1_500;
 // On a fresh mount, how long to watch the stream for an already-paused approval
 // before concluding the session is settled and dropping the stream.
@@ -285,18 +285,18 @@ export function ConsoleProvider({
         seenRef.current.add(ev.id);
         eventsRef.current = [...eventsRef.current, ev];
         dispatch({ type: "APPEND_EVENT", event: ev });
-        
+
         // If it's a HITL approval pause
         if (isApprovalEvent(ev)) {
           statusRef.current = "awaiting_approval";
           dispatch({ type: "AWAIT_APPROVAL", draft: extractDraft(eventsRef.current) });
           closeStream(); // run is paused at the gate — stop streaming
-        } 
+        }
         // If it's the final output event, the run is complete.
         // This avoids needing to continuously poll getCampaign in waitForOutcome.
         else if (ev.author === "output_agent" && ev.actions?.state_delta) {
-           // We know the turn is finished. Call reloadHistory to update the UI.
-           reloadHistory();
+          // We know the turn is finished. Call reloadHistory to update the UI.
+          reloadHistory();
         }
       };
       // On a transient error EventSource auto-reconnects; the replay is deduped.
