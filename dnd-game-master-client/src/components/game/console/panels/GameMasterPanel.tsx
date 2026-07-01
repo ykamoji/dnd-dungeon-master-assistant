@@ -46,9 +46,9 @@ export function GameMasterPanel({ orientation = "hero" }: GameMasterPanelProps) 
       </p>
 
       {error && (
-        <p className="shrink-0 rounded-card border border-blood-bright/50 bg-blood/10 px-3 py-2 text-sm text-blood-bright">
+        <div className="absolute bottom-[860px] left-1/3 rounded-card border border-blood-bright/50 bg-blood px-3 py-2 text-md text-gold">
           {error}
-        </p>
+        </div>
       )}
 
       <div className={`flex ${orientation === "vertical" ? "flex-col" : "flex-row"} items-center gap-3 space-y-3`}>

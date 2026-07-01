@@ -26,7 +26,7 @@ export function CommandComposer({
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
-            if (!disabled) onSubmit();
+            if (!disabled && value.trim()) onSubmit();
           }
         }}
         rows={2}

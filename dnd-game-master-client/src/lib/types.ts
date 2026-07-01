@@ -166,6 +166,7 @@ export type SessionStateDelta = Record<string, unknown> & {
 
 export interface SessionActions {
   state_delta?: SessionStateDelta;
+  end_of_agent?: boolean;
 }
 
 /** One streamed session event (one `data:` frame from the SSE endpoint). */

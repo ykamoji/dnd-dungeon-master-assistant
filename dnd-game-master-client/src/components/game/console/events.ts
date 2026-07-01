@@ -13,7 +13,8 @@ export function isApprovalEvent(ev: SessionEvent): boolean {
   return parts(ev).some(
     (p) =>
       p.function_call?.name === "adk_request_input" ||
-      p.function_call?.name === HITL_INTERRUPT_ID,
+      p.function_call?.name === HITL_INTERRUPT_ID ||
+      p.function_response?.name === "adk_request_input",
   );
 }
 

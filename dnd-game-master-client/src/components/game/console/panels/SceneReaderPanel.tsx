@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { Loader } from "@/components/ui/Loader";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -223,7 +224,21 @@ function SnapshotLayout({
           </p>
         )}
         {s.narrative && (
-          <p className="font-body text-md leading-relaxed text-parchment">{s.narrative}</p>
+          <div className="font-body text-md leading-relaxed text-parchment space-y-4">
+            <ReactMarkdown
+              components={{
+                strong: ({ node, ...props }) => <strong className="font-bold text-gold" {...props} />,
+                ul: ({ node, ...props }) => <ul className="list-disc pl-5 space-y-1" {...props} />,
+                ol: ({ node, ...props }) => <ol className="list-decimal pl-5 space-y-1" {...props} />,
+                h1: ({ node, ...props }) => <h1 className="text-xl font-display text-gold mt-4 mb-2" {...props} />,
+                h2: ({ node, ...props }) => <h2 className="text-lg font-display text-gold mt-4 mb-2" {...props} />,
+                h3: ({ node, ...props }) => <h3 className="text-md font-display text-gold mt-3 mb-2" {...props} />,
+                blockquote: ({ node, ...props }) => <blockquote className="border-l-2 border-gold/50 pl-4 italic text-parchment-dim" {...props} />,
+              }}
+            >
+              {s.narrative}
+            </ReactMarkdown>
+          </div>
         )}
 
         {s.dialogue && s.dialogue.length > 0 && (

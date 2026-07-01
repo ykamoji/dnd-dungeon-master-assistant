@@ -38,15 +38,15 @@ export function HowToPlay() {
     dispatch({ type: "START_NEW_SESSION" });
   };
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Enter") {
-        startTransition();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [state.dissolving, dispatch]);
+  // useEffect(() => {
+  //   const handleKeyDown = (e: KeyboardEvent) => {
+  //     if (e.key === "Enter") {
+  //       startTransition();
+  //     }
+  //   };
+  //   window.addEventListener("keydown", handleKeyDown);
+  //   return () => window.removeEventListener("keydown", handleKeyDown);
+  // }, [state.dissolving, dispatch]);
 
   return (
     <>

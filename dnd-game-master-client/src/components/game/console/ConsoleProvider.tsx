@@ -276,33 +276,45 @@ export function ConsoleProvider({
       esRef.current = es;
       es.onmessage = (e) => {
         let ev: SessionEvent;
+        // console.log(e.data);
         try {
           ev = JSON.parse(e.data) as SessionEvent;
-        } catch {
+        } catch (error) {
+          console.error("Failed to parse session event", e.data, error);
           return;
         }
         if (!ev?.id || seenRef.current.has(ev.id)) return;
         seenRef.current.add(ev.id);
         eventsRef.current = [...eventsRef.current, ev];
         dispatch({ type: "APPEND_EVENT", event: ev });
-
-        // If it's a HITL approval pause
-        if (isApprovalEvent(ev)) {
-          statusRef.current = "awaiting_approval";
-          dispatch({ type: "AWAIT_APPROVAL", draft: extractDraft(eventsRef.current) });
-          closeStream(); // run is paused at the gate — stop streaming
-        }
-        // If it's the final output event, the run is complete.
-        // This avoids needing to continuously poll getCampaign in waitForOutcome.
-        else if (ev.author === "output_agent" && ev.actions?.state_delta) {
-          // We know the turn is finished. Call reloadHistory to update the UI.
-          reloadHistory();
-        }
       };
       // On a transient error EventSource auto-reconnects; the replay is deduped.
     },
     [closeStream],
   );
+
+  // Process the tail of the event stream to detect state transitions (like HITL pause or turn completion).
+  // Relying on React's state batching naturally avoids processing stale intermediate events during a burst.
+  useEffect(() => {
+    if (state.events.length === 0) return;
+    const lastEvent = state.events[state.events.length - 1];
+    if (isApprovalEvent(lastEvent)) {
+      if (statusRef.current !== "awaiting_approval") {
+        statusRef.current = "awaiting_approval";
+        dispatch({ type: "AWAIT_APPROVAL", draft: extractDraft(state.events) });
+        closeStream(); // run is paused at the gate — stop streaming
+      }
+    } else if ((lastEvent.author === "output_agent" && lastEvent.actions?.state_delta) ||
+      (lastEvent.author === "setup_agent" && (lastEvent.actions?.end_of_agent))) {
+      if (statusRef.current !== "idle") {
+        // We know the turn is finished. Call reloadHistory to update the UI.
+        reloadHistory();
+        statusRef.current = "idle";
+        dispatch({ type: "RUN_DONE" });
+        closeStream(); // run is paused at the gate — stop streaming
+      }
+    }
+  }, [state.events, closeStream, reloadHistory]);
 
   /**
    * Wait for a submitted/resumed turn to reach its real outcome. The SSE drives
