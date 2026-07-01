@@ -203,12 +203,17 @@ def update_campaign(
             "metadata": _dump(metadata) if metadata is not None else last.get("metadata"),
             "initiative": initiative if initiative is not None else last.get("initiative"),
             "party": _dump(party) if party is not None else last.get("party"),
-            "npc_name": npc_name if npc_name is not None else last.get("npc_name"),
             "narrative": narrative if narrative is not None else last.get("narrative"),
-            "dialogue": [_dump(d) for d in dialogue] if dialogue is not None else last.get("dialogue"),
             "intent": intent if intent is not None else last.get("intent"),
             "created_dt": now
         }
+
+        if npc_name:
+            new_snapshot['npc_name'] = npc_name
+
+        if dialogue:
+            new_snapshot['dialogue'] = [_dump(d) for d in dialogue]
+        
         update_ops["$push"] = {"state": new_snapshot}
         
     col.update_one(

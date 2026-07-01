@@ -116,15 +116,15 @@ async def stream_session_events(session_id: str):
 
                     if author in ("output_agent"):
                         delta = ev_data.get("actions") and ev_data.get("actions").get("state_delta")
-                        if not delta.get("tools_fired") or len( delta.get("tools_fired")) == 0:
+                        if not delta.get("tools_fired") or len(delta.get("tools_fired")) == 0:
                             continue
                     
-                    if author in ("user", "campaign_agent"):
+                    if author in ("user", "campaign_agent", "npc_dialogue_agent", "action_agent"):
                         continue
 
                     if author in ("dnd_game_master_agent"):
                         delta = ev_data.get("actions") and ev_data.get("actions").get("state_delta")
-                        if delta.get("intent"):
+                        if delta.get("intent") or "update_campaign" in delta.get("tools_fired", []):
                             continue
                         
                     if author in ("intent_classifier", "campaign_executor", "action_executor", "npc_executor", "llm_evaluator"):

@@ -122,15 +122,15 @@ def _summarize_part(part: dict, color: bool) -> list[str]:
     if fr:
         name = fr.get("name", "?")
         resp = json.dumps(fr.get("response", fr), default=str)
-        if len(resp) > 400:
-            resp = resp[:400] + "…"
+        # if len(resp) > 400:
+        #     resp = resp[:400] + "…"
         lines.append(_color(f"    ⤷  FUNCTION_RESPONSE {name}: ", _MAGENTA, color) + resp)
     if text:
         label = "💭 THOUGHT" if is_thought else "💬 TEXT"
         code = _YELLOW if is_thought else ""
         body = text.strip()
-        if len(body) > 1500:
-            body = body[:1500] + "…[truncated]"
+        # if len(body) > 1500:
+        #     body = body[:1500] + "…[truncated]"
         prefix = _color(f"    {label}: ", code, color)
         # indent continuation lines for readability
         indented = body.replace("\n", "\n      ")

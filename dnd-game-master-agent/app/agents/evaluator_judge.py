@@ -47,10 +47,10 @@ async def evaluate_draft_semantically(
     prompt_event = Event(
         id=Event.new_id(),
         invocation_id=ctx.invocation_id,
-        author="user",
+        author="llm_evaluator",
         timestamp=time.time(),
         content=types.Content(
-            role="user",
+            role="model",
             parts=[types.Part.from_text(text=prompt)]
         )
     )

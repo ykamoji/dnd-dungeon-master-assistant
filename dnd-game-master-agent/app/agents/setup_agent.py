@@ -57,19 +57,18 @@ setup_executor = Agent(
     2. If the campaign name is missing, OR there are no party members, OR any member is missing a name, role, or class: set "ready": false, "party": [], 
        and write in "message" exactly what is still needed — e.g. "Before we start the adventure I need a campaign name and, for each party member, a name, a role, and a class."
        Do NOT call any tools in this case.
-    3. Otherwise, you MUST look up the class data for EVERY party member simultaneously. 
-       Issue all necessary tool calls to `lookup_character_resource` in a single, parallel batch (one tool call per party member). 
-       Do not look them up one by one. Once all parallel tool results are returned, use the data to:
+    3. Otherwise, you MUST look up the class data for EVERY party member using `lookup_character_resource`.
+       Pass the all party's class names together to tool `lookup_character_resource` to retrieve all their relevant class data. 
+       Do not call the tool for each class separately. Once retrieved their data,
          - Set max_hp to the leading whole number of "hp_at_1st_level" (e.g.
            "10 + your Constitution modifier" -> 10), and set hp = max_hp (the party
            starts at full health).
-         - Seed "weapons" and "armors" from the class's "prof_weapons" / "prof_armor"
+         - Seed "class_weapons" and "class_armors" from the class's "class_proficient_weapons" / "class_proficient_armor"
            (a reasonable starting loadout). Only list gear grounded in the tool data —
            never invent specific magic items.
          - Set "conditions": [].
        Then set "ready": true and a short "message" confirming the party is ready.
-    4. Call the `story_agent` with the arg: "Build the first scene for the campaign.". 
-       This tool should be called in parallel with the `lookup_character_resource` tool calls.
+    4. Call the `story_agent` with the arg: "Build the first scene for the campaign.". `story_agent` should be called in parallel with the `lookup_character_resource` tool call.
 
     MANDATORY TOOL USE: You do NOT know a class's HP or proficiencies until `lookup_character_resource` ACTUALLY returns them. 
     NEVER simulate, assume, or imagine a tool result. Issue the real tool call and wait for its response before filling hp/max_hp/weapons/armors. 
