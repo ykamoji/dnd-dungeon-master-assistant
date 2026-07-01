@@ -15,7 +15,7 @@ export function ThreeColumnLayout() {
         <SceneReaderPanel />
       </div>
       <aside className="parchment min-h-0 rounded-card border border-stone-2 p-4">
-        <GameMasterPanel />
+        <GameMasterPanel orientation="vertical" />
       </aside>
     </div>
   );

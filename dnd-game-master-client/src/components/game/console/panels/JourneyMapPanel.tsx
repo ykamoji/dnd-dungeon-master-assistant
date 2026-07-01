@@ -21,7 +21,7 @@ function PanelHeading() {
   );
 }
 
-/** Campaign progress as a zig-zag trail of turn waypoints (req 1.1). */
+/** Campaign progress as a zig-zag trail of turn waypoints. */
 export function JourneyMapPanel({ orientation = "vertical" }: JourneyMapPanelProps) {
   const { history, activeIndex, selectTurn, historyLoading, pending, viewPending, selectPending } =
     useConsole();
@@ -96,9 +96,8 @@ export function JourneyMapPanel({ orientation = "vertical" }: JourneyMapPanelPro
   // Vertical serpentine: a center line with nodes alternating left / right.
   const dot = (active: boolean) => (
     <span
-      className={`absolute left-1/2 top-5 h-3 w-3 -translate-x-1/2 rounded-full border-2 ${
-        active ? "border-gold-bright bg-gold" : "border-stone-2 bg-stone"
-      }`}
+      className={`absolute left-1/2 top-5 h-3 w-3 -translate-x-1/2 rounded-full border-2 ${active ? "border-gold-bright bg-gold" : "border-stone-2 bg-stone"
+        }`}
       aria-hidden
     />
   );

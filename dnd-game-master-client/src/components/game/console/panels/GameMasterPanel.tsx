@@ -7,11 +7,16 @@ import { CommandComposer } from "../parts/CommandComposer";
 
 const NO_ROLLS: DiceRolls = { d20: null, d100: null };
 
+interface GameMasterPanelProps {
+  /** "vertical" = serpentine rail; "hero" = a wider, board-like wrap. */
+  orientation?: "vertical" | "hero";
+}
+
 /**
  * The Game Master core (req 1.2): dice, command input, and the HITL approval
  * controls. The live trace is shown in the scene reader, not here.
  */
-export function GameMasterPanel() {
+export function GameMasterPanel({ orientation = "hero" }: GameMasterPanelProps) {
   const {
     runStatus,
     composerDraft,
@@ -37,7 +42,7 @@ export function GameMasterPanel() {
   };
 
   return (
-    <div className="">
+    <div>
       <p className="shrink-0 font-display text-[10px] uppercase tracking-[0.3em] text-gold">
         Game Master
       </p>
@@ -48,8 +53,8 @@ export function GameMasterPanel() {
         </p>
       )}
 
-      <div className="flex flex-row items-center gap-3 space-y-3">
-        <DiceTray rolls={rolls} onRoll={setRolls} disabled={busy} />
+      <div className={`flex ${orientation === "vertical" ? "flex-col" : "flex-row"} items-center gap-3 space-y-3`}>
+        < DiceTray rolls={rolls} onRoll={setRolls} disabled={busy} />
         <CommandComposer
           value={composerDraft}
           onChange={setComposerDraft}
@@ -62,6 +67,6 @@ export function GameMasterPanel() {
           }
         />
       </div>
-    </div>
+    </div >
   );
 }
