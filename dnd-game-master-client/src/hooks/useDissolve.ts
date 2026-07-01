@@ -37,12 +37,14 @@ export function useDissolve() {
     if (!canvas) return;
 
     const rect = target.getBoundingClientRect();
-    const snap = await html2canvas(target, {
-      backgroundColor: null,
-      scale: 1,
-      logging: false,
-      useCORS: true,
-    });
+    let snap; try {
+      snap = await html2canvas(target, {
+        backgroundColor: null,
+        scale: 1,
+        logging: false,
+        useCORS: true,
+      });
+    } catch (e) { console.error("html2canvas error:", e); return; }
     // Hide the source the instant we have its pixels, so particles don't ghost
     // over the still-visible element.
     target.style.visibility = "hidden";
@@ -64,6 +66,7 @@ export function useDissolve() {
     const img = sctx.getImageData(0, 0, snap.width, snap.height).data;
 
     const particles: Particle[] = [];
+    // console.log("Dissolve capturing. Canvas size:", canvas.width, canvas.height, "Snap size:", snap.width, snap.height);
     for (let sy = 0; sy < snap.height; sy += SAMPLE_STEP) {
       for (let sx = 0; sx < snap.width; sx += SAMPLE_STEP) {
         const idx = (sy * snap.width + sx) * 4;
@@ -85,6 +88,7 @@ export function useDissolve() {
       }
     }
 
+    // console.log("Dissolve particles generated:", particles.length);
     return new Promise<void>((resolve) => {
       const t0 = performance.now();
       const tick = (now: number) => {

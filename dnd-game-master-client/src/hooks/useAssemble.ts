@@ -50,21 +50,32 @@ export function useAssemble() {
     targetRef.current = target;
     const promise = (async () => {
       target.setAttribute("data-sand-target", "true");
-      const snap = await html2canvas(target, {
-        backgroundColor: null,
-        scale: 1,
-        logging: false,
-        useCORS: true,
-        onclone: (clonedDoc) => {
-          const clonedTarget = clonedDoc.querySelector(
-            '[data-sand-target="true"]',
-          ) as HTMLElement | null;
-          if (clonedTarget) {
-            clonedTarget.style.visibility = "visible";
-            clonedTarget.style.opacity = "1";
-          }
-        },
-      });
+      let snap; try {
+        snap = await html2canvas(target, {
+          backgroundColor: null,
+          scale: 1,
+          logging: false,
+          useCORS: true,
+          onclone: (clonedDoc) => {
+            const clonedTarget = clonedDoc.querySelector(
+              '[data-sand-target="true"]',
+            ) as HTMLElement | null;
+            if (clonedTarget) {
+              // Aggressively strip opacity: 0 from Framer Motion elements
+              // so we don't need any delay before taking the snapshot.
+              const allEls = clonedTarget.querySelectorAll("*");
+              allEls.forEach((el) => {
+                const htmlEl = el as HTMLElement;
+                if (htmlEl.style.opacity === "0" || window.getComputedStyle(htmlEl).opacity === "0") {
+                  htmlEl.style.opacity = "1";
+                }
+              });
+              clonedTarget.style.visibility = "visible";
+              clonedTarget.style.opacity = "1";
+            }
+          },
+        });
+      } catch (e) { console.error("html2canvas error:", e); return; }
       target.removeAttribute("data-sand-target");
       // Keep the real element hidden until the sand finishes forming.
       target.style.visibility = "hidden";
@@ -79,6 +90,7 @@ export function useAssemble() {
       const img = sctx.getImageData(0, 0, snap.width, snap.height).data;
 
       const particles: AssembleParticle[] = [];
+      // console.log("Assemble capturing. Snap size:", snap.width, snap.height);
       for (let sy = 0; sy < snap.height; sy += SAMPLE_STEP) {
         for (let sx = 0; sx < snap.width; sx += SAMPLE_STEP) {
           const idx = (sy * snap.width + sx) * 4;
@@ -103,6 +115,7 @@ export function useAssemble() {
         }
       }
       particlesRef.current = particles;
+      // console.log("Assemble particles generated:", particles.length);
     })();
     prepPromiseRef.current = promise;
     return promise;
