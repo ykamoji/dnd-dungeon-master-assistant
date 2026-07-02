@@ -41,12 +41,8 @@ export function GameMasterPanel({ orientation = "hero" }: GameMasterPanelProps) 
 
   return (
     <div>
-      <p className="shrink-0 font-display text-[10px] uppercase tracking-[0.3em] text-gold">
-        Game Master
-      </p>
-
       {error && (
-        <div className="absolute bottom-[860px] left-1/3 rounded-card border border-blood-bright/50 bg-blood px-3 py-2 text-md text-gold">
+        <div className="absolute bottom-[860px] left-1/3 mt-1 rounded-card border border-blood-bright/50 bg-blood px-3 py-2 text-md text-gold">
           {error}
         </div>
       )}

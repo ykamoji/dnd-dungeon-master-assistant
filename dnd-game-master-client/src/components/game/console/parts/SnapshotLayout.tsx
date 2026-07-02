@@ -120,11 +120,13 @@ export function SnapshotLayout({
   snapshot,
   progress,
   summary,
+  current,
   setComposerDraft,
 }: {
   snapshot: TurnSnapshot;
   progress?: number | null;
   summary?: string | null;
+  current?: boolean;
   setComposerDraft: (text: string) => void;
 }) {
   const [partyModalOpen, setPartyModalOpen] = useState(false);
@@ -146,7 +148,7 @@ export function SnapshotLayout({
   }
 
   return (
-    <div className="flex h-full gap-4 overflow-hidden pr-2 pb-10">
+    <div className={`flex h-full gap-4 overflow-hidden pr-2 ${!current ? "pb-10" : ""}`}>
       {/* Left Column: Metadata & Actions */}
       <div className="overflow-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex w-1/3 flex-shrink-0 flex-col gap-6 overflow-y-auto pb-6">
         <header>

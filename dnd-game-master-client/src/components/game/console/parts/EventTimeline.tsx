@@ -29,7 +29,7 @@ function EventBox({
       type="button"
       onClick={onClick}
       title={title}
-      className={`flex max-w-[11rem] items-center gap-2 rounded-card border px-4 py-2 text-left transition-colors ${active
+      className={`flex max-w-[15rem] items-center gap-2 rounded-card border px-4 py-2 text-left transition-colors ${active
         ? "border-gold bg-gold/15"
         : "border-stone-2 bg-obsidian-2/80 hover:border-gold/50"
         }`}
