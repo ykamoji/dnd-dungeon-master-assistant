@@ -157,7 +157,7 @@ Appendix E handouts meant to be shown to players: NPC portraits, puzzle clues, l
 | `109-ph19.webp` | Handout 19: Acererak's Third Warning |
 | `110-ph20.webp` | Handout 20: Acererak's Fourth Warning |
 | `111-ph21.webp` | Handout 21: Devlin's Journal Excerpt |
-| `112-ph22.webp` | Handout 22: Withers's Journal Excerpt |
+| `112-ph22.webp` | Handout 22: Withers's Journal Excerpt | 
 | `113-ph23.webp` | Handout 23: Hieroglyphic Floor |
 | `114-ph24.webp` | Handout 24: Control Panel |
 

@@ -235,10 +235,10 @@ export function ConsoleProvider({
   // When persisted history grows (initial load or a completed turn), snap the
   // reader to the newest turn — unless a turn is in flight (keep the pending view).
   useEffect(() => {
-    if (history.length && !pendingRef.current) {
+    if (history.length && state.runStatus === "idle") {
       dispatch({ type: "SELECT_TURN", index: history.length - 1 });
     }
-  }, [history.length]);
+  }, [history.length, state.runStatus]);
 
   const campaignName = useMemo(() => {
     const entry = GAME_CATALOG.find((g) => g.id === game.selectedGameId);
