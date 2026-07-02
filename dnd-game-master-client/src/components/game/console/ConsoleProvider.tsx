@@ -46,6 +46,7 @@ interface ConsoleState {
   composerDraft: string;
   error: string | null;
   streamDelaying: boolean;
+  readerTab: "scene" | "timeline";
 }
 
 const initialState: ConsoleState = {
@@ -57,6 +58,7 @@ const initialState: ConsoleState = {
   composerDraft: "",
   error: null,
   streamDelaying: false,
+  readerTab: "scene",
 };
 
 type Action =
@@ -73,7 +75,8 @@ type Action =
   | { type: "REJECTED" }
   | { type: "RUN_ERROR"; message: string }
   | { type: "START_STREAM_DELAY" }
-  | { type: "END_STREAM_DELAY" };
+  | { type: "END_STREAM_DELAY" }
+  | { type: "SET_READER_TAB"; tab: "scene" | "timeline" };
 
 function reducer(state: ConsoleState, action: Action): ConsoleState {
   switch (action.type) {
@@ -124,6 +127,8 @@ function reducer(state: ConsoleState, action: Action): ConsoleState {
       return { ...state, streamDelaying: true };
     case "END_STREAM_DELAY":
       return { ...state, streamDelaying: false };
+    case "SET_READER_TAB":
+      return { ...state, readerTab: action.tab };
     default:
       return state;
   }
@@ -158,6 +163,8 @@ interface ConsoleContextValue {
   selectTurn: (index: number) => void;
   selectPending: () => void;
   setComposerDraft: (text: string) => void;
+  readerTab: "scene" | "timeline";
+  setReaderTab: (tab: "scene" | "timeline") => void;
 }
 
 const ConsoleContext = createContext<ConsoleContextValue | null>(null);
@@ -208,6 +215,10 @@ export function ConsoleProvider({
 }: ConsoleProviderProps) {
   const { state: game, dispatch: gameDispatch } = useGame();
   const [state, dispatch] = useReducer(reducer, initialState);
+
+  const setReaderTab = useCallback((tab: "scene" | "timeline") => {
+    dispatch({ type: "SET_READER_TAB", tab });
+  }, []);
 
   // The session id is the campaign id (the ambient handler keys the session by
   // the Pub/Sub subscription, which we set to the campaign id).
@@ -544,6 +555,8 @@ export function ConsoleProvider({
     selectTurn,
     selectPending,
     setComposerDraft,
+    readerTab: state.readerTab,
+    setReaderTab,
   };
 
   return <ConsoleContext.Provider value={value}>{children}</ConsoleContext.Provider>;
