@@ -63,12 +63,9 @@ export function CommandComposer({
               : "border-stone-2 focus:border-gold/60"
               }`}
           />
-          {voiceActive && (
-            <div className="pointer-events-none absolute right-3 top-2.5 flex items-center gap-2 rounded-full border border-gold-bright/40 bg-obsidian/75 px-2.5 py-1 backdrop-blur-sm">
+          {voiceActive && !connecting && (
+            <div className="pointer-events-none absolute right-3 top-2.5 flex items-center gap-2 bg-obsidian-2 px-2.5 py-1">
               <VoiceWaveform />
-              <span className="font-display text-[7px] uppercase tracking-[0.25em] text-gold-bright">
-                {connecting ? "Connecting" : "Listening"}
-              </span>
             </div>
           )}
         </div>
@@ -78,7 +75,7 @@ export function CommandComposer({
           disabled={disabled}
           onClick={toggleVoice}
         />
-        <Button onClick={onSubmit} disabled={disabled || !value.trim()} size="md" className="h-18 shrink-0" >
+        <Button onClick={onSubmit} disabled={disabled || !value.trim()} size="md" className="h-15 w-15 mt-[5px] shrink-0" >
           Send
         </Button>
       </div>

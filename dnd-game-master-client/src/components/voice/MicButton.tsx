@@ -72,7 +72,7 @@ export function MicButton({
       size="md"
       className={[
         // Square icon button (override the variant's default padding/size).
-        "cursor-pointer h-18",
+        "cursor-pointer h-14 w-14 mt-[6px] !rounded-full",
         active
           ? "bg-gradient-to-br from-gold-bright via-gold to-ember !border-gold-bright/60 !text-obsidian"
           : "hover:-translate-y-0.5 hover:shadow-[0_0_16px_-2px_rgba(200,161,74,0.45)]",

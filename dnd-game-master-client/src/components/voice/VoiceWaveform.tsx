@@ -8,13 +8,21 @@
 
 // Per-bar timing so the wave looks organic instead of marching in lockstep.
 const BARS = [
-  { delay: "0s", duration: "0.8s" },
-  { delay: "0.18s", duration: "1s" },
-  { delay: "0.36s", duration: "0.7s" },
-  { delay: "0.1s", duration: "0.95s" },
-  { delay: "0.28s", duration: "0.75s" },
-  { delay: "0.42s", duration: "0.9s" },
-  { delay: "0.06s", duration: "0.82s" },
+  { delay: "0s" },
+  { delay: "0.06s" },
+  { delay: "0.12s" },
+  { delay: "0.18s" },
+  { delay: "0.24s" },
+  { delay: "0.3s" },
+  { delay: "0.36s" },
+  { delay: "0.42s" },
+  { delay: "0.48s" },
+  { delay: "0.54s" },
+  { delay: "0.6s" },
+  { delay: "0.66s" },
+  { delay: "0.72s" },
+  { delay: "0.78s" },
+  { delay: "0.84s" },
 ];
 
 interface VoiceWaveformProps {
@@ -23,15 +31,12 @@ interface VoiceWaveformProps {
 
 export function VoiceWaveform({ className = "" }: VoiceWaveformProps) {
   return (
-    <div
-      className={`flex h-4 items-center gap-[3px] ${className}`}
-      aria-hidden="true"
-    >
+    <div className={`flex h-10 items-end gap-[5px] ${className}`} aria-hidden="true">
       {BARS.map((bar, i) => (
         <span
           key={i}
-          className="voice-wave-bar h-full w-[3px] rounded-full bg-gradient-to-t from-ember to-gold-bright"
-          style={{ animationDelay: bar.delay, animationDuration: bar.duration }}
+          className="voice-wave-bar h-8 w-[2px] rounded-full bg-gradient-to-t from-ember to-gold-bright"
+          style={{ animationDelay: bar.delay }}
         />
       ))}
     </div>

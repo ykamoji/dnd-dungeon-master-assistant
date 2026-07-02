@@ -57,7 +57,7 @@ export function DiceTray({ rolls, onRoll, disabled }: DiceTrayProps) {
   };
 
   return (
-    <div className="flex items-center gap-3 mt-4">
+    <div className="flex items-center gap-3">
       <Die
         sides={20}
         armed={armed.d20}
