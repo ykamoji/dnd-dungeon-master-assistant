@@ -11,6 +11,7 @@ interface ModalProps {
   children: ReactNode;
   onClose: () => void;
   size?: "xs" | "md" | "lg";
+  footer?: ReactNode;
 }
 
 const SIZE: Record<NonNullable<ModalProps["size"]>, string> = {
@@ -20,7 +21,7 @@ const SIZE: Record<NonNullable<ModalProps["size"]>, string> = {
 };
 
 /** Themed popup dialog (used for "coming soon" campaigns + DNA profile). */
-export function Modal({ open, title, children, onClose, size = "md" }: ModalProps) {
+export function Modal({ open, title, children, onClose, size = "md", footer }: ModalProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -56,10 +57,14 @@ export function Modal({ open, title, children, onClose, size = "md" }: ModalProp
             <div className="scroll-thin -mr-2 mb-6 min-h-0 flex-1 overflow-y-auto pr-2 text-parchment-dim">
               {children}
             </div>
-            <div className="flex shrink-0 justify-end">
-              <Button variant="secondary" onClick={onClose}>
-                Close
-              </Button>
+            <div className="flex shrink-0 justify-end gap-3">
+              {footer ? (
+                footer
+              ) : (
+                <Button variant="secondary" onClick={onClose}>
+                  Close
+                </Button>
+              )}
             </div>
           </motion.div>
         </motion.div>

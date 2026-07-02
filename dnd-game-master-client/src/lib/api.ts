@@ -36,13 +36,32 @@ export function getCampaigns(): Promise<CampaignSummary[]> {
   return getJSON<CampaignSummary[]>("/campaigns");
 }
 
-/** GET /campaign/{id} — full campaign document (`state` = 1 or N turns). */
 export function getCampaign(
   campaignId: string,
   includeHistory = false,
 ): Promise<Campaign> {
   const q = includeHistory ? "?include_history=true" : "";
   return getJSON<Campaign>(`/campaign/${encodeURIComponent(campaignId)}${q}`);
+}
+
+/** DELETE /campaign/{id} — deletes a campaign and its history. */
+export async function deleteCampaign(campaignId: string): Promise<void> {
+  const res = await fetch(`${ROOT_API}/campaign/${encodeURIComponent(campaignId)}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to delete campaign: ${res.status}`);
+  }
+}
+
+/** DELETE /apps/app/users/user/sessions/{id} — deletes a session from ADK. */
+export async function deleteSession(sessionId: string): Promise<void> {
+  const res = await fetch(`${ROOT_API}/apps/app/users/user/sessions/${encodeURIComponent(sessionId)}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to delete session: ${res.status}`);
+  }
 }
 
 /** POST /tools/fetch_campaign_files — fetch adventure markdown docs by path. */

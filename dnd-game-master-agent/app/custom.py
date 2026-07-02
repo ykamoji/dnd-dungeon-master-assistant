@@ -64,6 +64,14 @@ def api_get_state(campaign_id: str):
         raise HTTPException(status_code=404, detail="Campaign not found")
     return state
 
+@router.delete("/campaign/{campaign_id}")
+def api_delete_campaign(campaign_id: str):
+    col = get_campaigns_col()
+    result = col.delete_many({"campaign_id": campaign_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    return {"status": "success"}
+
 @router.post("/campaign/{campaign_id}/update")
 def api_update_campaign(campaign_id: str, req: UpdateCampaignRequest):
     return TOOL_FUNCTIONS["update_campaign"](

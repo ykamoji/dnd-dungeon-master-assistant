@@ -1,10 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Loader } from "@/components/ui/Loader";
 import { SectionShell } from "@/components/ui/SectionShell";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
 import { useGame } from "@/context/GameContext";
 import { useCampaigns } from "@/hooks/useCampaigns";
+import { deleteCampaign, deleteSession } from "@/lib/api";
 import { GAME_CATALOG } from "@/lib/games";
 
 // Fallback cover when a saved campaign has no asset art yet.
@@ -19,7 +23,29 @@ const coverFor = (campaignName?: string, coverUrl?: string | null) => {
 /** Resume branch: list saved campaigns; selecting one dissolves to the console. */
 export function ResumeView() {
   const { dispatch } = useGame();
-  const { campaigns, loading, error } = useCampaigns();
+  const { campaigns, loading, error, reload } = useCampaigns();
+  const [campaignToDelete, setCampaignToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const confirmDelete = async () => {
+    if (!campaignToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteCampaign(campaignToDelete.id);
+      try {
+        await deleteSession(campaignToDelete.id);
+      } catch (e) {
+        console.warn("Session may not exist or could not be deleted:", e);
+      }
+      setCampaignToDelete(null);
+      reload();
+    } catch (e) {
+      console.error(e);
+      alert("Failed to delete campaign.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const select = (id: string) => {
     dispatch({ type: "SELECT_CAMPAIGN", campaignId: id });
@@ -72,6 +98,7 @@ export function ResumeView() {
                     : undefined
                 }
                 onClick={() => select(c.campaign_id)}
+                onDelete={() => setCampaignToDelete({ id: c.campaign_id, name: c.campaign_name || c.campaign_id })}
               />
             </div>
           ))}
@@ -79,6 +106,29 @@ export function ResumeView() {
           <div className="w-[10vw] shrink-0" aria-hidden />
         </div>
       )}
+
+      <Modal
+        open={campaignToDelete !== null}
+        title="Delete Campaign"
+        size="xs"
+        onClose={() => !isDeleting && setCampaignToDelete(null)}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setCampaignToDelete(null)} disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={confirmDelete} disabled={isDeleting}>
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </>
+        }
+      >
+        <p>
+          Are you sure you want to delete{" "}
+          <span className="text-gold-bright">{campaignToDelete?.name}</span>? This
+          action cannot be undone.
+        </p>
+      </Modal>
     </SectionShell>
   );
 }
