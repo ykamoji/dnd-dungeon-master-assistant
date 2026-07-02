@@ -15,7 +15,7 @@ function hpTone(ratio: number): string {
 function gearLine(label: string, items: string[]) {
   if (!items?.length) return null;
   return (
-    <p className="text-[14px] text-parchment-dim">
+    <p className="text-[16px] text-parchment-dim">
       <span className="text-gold/80">{label}:</span> {items.join(", ")}
     </p>
   );
@@ -46,7 +46,7 @@ function CharacterCard({ name, c }: { name: string; c: CharacterState }) {
           {c.conditions.map((cond) => (
             <span
               key={cond}
-              className="rounded-full border border-blood-bright/40 px-2 py-0.5 text-[12px] text-blood-bright"
+              className="rounded-full border-[0.1] border-gold-dark/40 px-2 py-0.5 text-[14px]"
             >
               {cond}
             </span>
@@ -68,7 +68,7 @@ function CharacterCard({ name, c }: { name: string; c: CharacterState }) {
 export function PartyStatGrid({ party }: PartyStatGridProps) {
   const entries = Object.entries(party?.characters ?? {});
   if (entries.length === 0) {
-    return <p className="font-rune text-sm text-parchment-dim/70">No party state recorded yet.</p>;
+    return <p className="font-rune text-md text-parchment-dim/70">No party state recorded yet.</p>;
   }
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

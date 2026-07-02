@@ -82,6 +82,54 @@ body {
   border-radius: 9999px;
 }
 
+/* --- Voice transcription visuals ------------------------------------------ */
+
+/* Equalizer bar bounce (ChatGPT-style live waveform). Bars stagger their delay
+   inline. Uses transform:scaleY so it stays GPU-cheap. */
+@keyframes voice-wave {
+
+  0%,
+  100% {
+    transform: scaleY(0.35);
+    opacity: 0.75;
+  }
+
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+.voice-wave-bar {
+  transform-origin: center;
+  animation: voice-wave 0.9s ease-in-out infinite;
+}
+
+/* Expanding ember/gold ring around the active mic button. */
+@keyframes mic-ring {
+  0% {
+    box-shadow:
+      0 0 0 0 rgba(230, 195, 115, 0.5),
+      0 0 18px 0 rgba(217, 119, 6, 0.35);
+  }
+
+  70% {
+    box-shadow:
+      0 0 0 12px rgba(230, 195, 115, 0),
+      0 0 22px 2px rgba(217, 119, 6, 0.15);
+  }
+
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(230, 195, 115, 0),
+      0 0 18px 0 rgba(217, 119, 6, 0.35);
+  }
+}
+
+.animate-mic-ring {
+  animation: mic-ring 1.8s ease-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
 
   *,

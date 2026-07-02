@@ -30,16 +30,15 @@ export function TrailNode({
         onClick={onClick}
         whileHover={{ y: -2 }}
         title="Turn in progress"
-        className={`group relative flex w-44 items-center gap-3 rounded-card border p-2 text-left transition-colors ${
-          active ? "border-gold bg-gold/15" : "border-stone-2 bg-obsidian-2/80 hover:border-gold/40"
-        }`}
+        className={`group relative flex w-44 items-center gap-3 rounded-card border p-2 text-left transition-colors ${active ? "border-gold bg-gold/20" : "border-stone-2 bg-obsidian-2 hover:border-gold/40"
+          }`}
       >
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-stone">
           <span className="h-5 w-5 animate-spin rounded-full border-2 border-stone-2 border-t-gold" />
         </span>
         <span className="min-w-0 flex-1">
           <span className="font-display text-[9px] uppercase tracking-widest text-gold">
-            Turn {turn}
+            # {turn}
           </span>
           <span className="block truncate font-body text-sm text-parchment-dim">
             In progress…
@@ -59,23 +58,21 @@ export function TrailNode({
       onClick={onClick}
       whileHover={{ y: -2 }}
       title={sceneLabel(snapshot)}
-      className={`group relative flex w-44 items-center gap-3 rounded-card border p-2 text-left transition-colors ${
-        active
-          ? "border-gold bg-gold/15"
-          : "border-stone-2 bg-obsidian-2/80 hover:border-gold/40"
-      }`}
+      className={`group relative cursor-pointer flex w-44 items-center gap-3 rounded-card border p-2 text-left transition-colors ${active
+        ? "border-gold bg-gold/10"
+        : "border-stone-2 bg-obsidian-2 hover:border-gold/40"
+        }`}
     >
       <span
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-lg ${
-          active ? "border-gold-bright bg-stone" : "border-stone-2 bg-stone"
-        }`}
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-lg ${active ? "border-gold-bright bg-stone" : "border-stone-2 bg-stone"
+          }`}
         style={
           thumb
             ? {
-                backgroundImage: `url(${thumb})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }
+              backgroundImage: `url(${thumb})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }
             : undefined
         }
         aria-hidden
@@ -84,8 +81,8 @@ export function TrailNode({
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1">
-          <span className="font-display text-[9px] uppercase tracking-widest text-gold">
-            Turn {turn}
+          <span className={`font-display text-[14px] font-bold uppercase tracking-widest ${active ? 'text-gold-bright' : 'text-gold'}`}>
+            #{turn}
           </span>
           {isLatest && (
             <span className="rounded-full bg-blood px-1.5 text-[8px] uppercase tracking-wider text-parchment">
