@@ -42,7 +42,7 @@ npc_executor = Agent(
        If the docs contain actual lines for this NPC, adapt or quote them rather than inventing new ones; otherwise speak consistently with the profile and scene.
        Include an emotional tone per line, reference campaign events, and move the story forward.
 
-    Return a single JSON object matching this sample schema (no prose outside the JSON):
+    Return a single JSON object matching this schema (no prose outside the JSON):
     {
       "narrative": "brief framing of the social scene",
       "npc_name": "...",

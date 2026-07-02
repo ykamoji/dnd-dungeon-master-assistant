@@ -4,6 +4,8 @@ These cover the deterministic routing/guardrail logic in app/agent.py with no LL
 calls — the LLM-driven classification and the full pipeline are covered by the
 integration test (tests/integration/test_agent.py).
 """
+from unittest.mock import patch
+
 import pytest
 
 from app.agent import prepare, route_intent
@@ -17,7 +19,11 @@ class _Ctx:
 
 
 def test_prepare_safe_input_routes_safe():
-    ev = prepare(_Ctx({"campaign_id": "c1"}), "I attack the goblin with my sword")
+    # An initialized campaign (non-empty state) means no setup is needed, so safe
+    # input routes "safe". Mock get_campaign so the test never touches MongoDB.
+    existing = {"campaign_id": "c1", "state": [{"scene": "Jungle Edge"}]}
+    with patch("app.agent.get_campaign", return_value=existing):
+        ev = prepare(_Ctx({"campaign_id": "c1"}), "I attack the goblin with my sword")
     assert ev.actions.route == "safe"
 
     sd = ev.actions.state_delta

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1a0e0a"/>
+      <stop offset="1" stop-color="#2a1712"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="800" fill="url(#g)"/>
+  <rect x="12" y="12" width="576" height="776" fill="none" stroke="#c8a14a" stroke-opacity="0.3" stroke-width="2"/>
+  <circle cx="300" cy="320" r="120" fill="#d97706" opacity="0.45"/>
+  <path d="M220 300 q80 -90 160 0 q-80 60 -160 0z" fill="#7b1113" opacity="0.7"/>
+  <text x="300" y="560" fill="#c8a14a" font-family="Georgia, serif" font-size="30" text-anchor="middle">Wrath of Ashardalon</text>
+  <text x="300" y="600" fill="#b7a888" font-family="Georgia, serif" font-size="18" text-anchor="middle">cover art placeholder</text>
+</svg>

@@ -238,10 +238,10 @@ async def persist_campaign_callback(callback_context: CallbackContext) -> None:
     description = resp.get("narrative") or None
     progress = resp.get("progress")  # may be None == "unchanged"
 
-    # chapter/section/asset_urls + the GM-facing extras all live in scene metadata.
+    # chapter/section/assets + the GM-facing extras all live in scene metadata.
     chapter = resp.get("chapter") or None
     section = resp.get("section") or None
-    asset_urls = resp.get("asset_urls") or []
+    assets = resp.get("assets") or []
     gm_notes = resp.get("gm_notes") or None
     next_scene_suggestions = resp.get("next_scene_suggestions") or []
     suggested_actions = resp.get("suggested_actions") or []
@@ -252,14 +252,14 @@ async def persist_campaign_callback(callback_context: CallbackContext) -> None:
     metadata = CampaignMetadata(
         chapter=chapter,
         section=section,
-        asset_urls=asset_urls,
+        assets=assets,
         gm_notes=gm_notes,
         next_scene_suggestions=next_scene_suggestions,
         suggested_actions=suggested_actions,
         combat_log=combat_log,
         math_breakdown=math_breakdown,
         requires_roll=requires_roll,
-    ) if (chapter or section or asset_urls or gm_notes or next_scene_suggestions
+    ) if (chapter or section or assets or gm_notes or next_scene_suggestions
           or suggested_actions or combat_log or math_breakdown or requires_roll) else None
 
     # initiative: empty list means "unchanged" -> pass None so the tool carries

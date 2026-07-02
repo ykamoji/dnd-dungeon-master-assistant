@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+/*
+  D&D Game Master theme — a single source of design tokens consumed by every
+  component (no ad-hoc colors). Dark obsidian canvas, parchment text, blood-red
+  and antique-gold accents, ember highlights.
+*/
+@theme {
+  /* Palette */
+  --color-obsidian: #0c0a09;
+  --color-obsidian-2: #14110f;
+  --color-stone: #2a2520;
+  --color-stone-2: #3b342c;
+  --color-parchment: #e8dcc0;
+  --color-parchment-dim: #b7a888;
+  --color-ink: #1a1614;
+  --color-blood: #7b1113;
+  --color-blood-bright: #a51d20;
+  --color-gold: #c8a14a;
+  --color-gold-bright: #e6c373;
+  --color-ember: #d97706;
+
+  /* Fonts (wired to next/font CSS variables in layout.tsx) */
+  --font-display: var(--font-cinzel), serif;
+  --font-rune: var(--font-medieval), serif;
+  --font-body: var(--font-garamond), Georgia, serif;
+
+  /* Misc */
+  --radius-card: 0.75rem;
+}
+
+:root {
+  --background: var(--color-obsidian);
+  --foreground: var(--color-parchment);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 50% -10%, rgba(123, 17, 19, 0.18), transparent 60%),
+    radial-gradient(900px 500px at 100% 100%, rgba(200, 161, 74, 0.08), transparent 55%),
+    var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Faint parchment grain usable on panels: class `.parchment` */
+.parchment {
+  background-color: var(--color-stone);
+  /* background-image:
+    radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    radial-gradient(rgba(0, 0, 0, 0.25) 1px, transparent 1px); */
+  background-size: 6px 6px, 6px 6px;
+  background-position: 0 0, 3px 3px;
+}
+
+/* Decorative gradient text for headings: class `.text-gilded` */
+.text-gilded {
+  background: linear-gradient(180deg, var(--color-gold-bright), var(--color-gold) 60%, #8a6d28);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Thin themed scrollbar for inner scroll panels */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-stone-2) transparent;
+}
+
+.scroll-thin::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: var(--color-stone-2);
+  border-radius: 9999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

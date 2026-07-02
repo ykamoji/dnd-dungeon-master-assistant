@@ -50,7 +50,7 @@ action_executor = Agent(
     NEVER simulate, assume, pretend, or imagine a tool result — phrases like "(simulated)" or "assuming this returns…" are forbidden.
     Issue the real tool call and wait for its response before resolving anything. If a needed tool returns nothing, say so in `narrative` instead of inventing data.
 
-    Return a single JSON object matching this sample schema (no prose outside the JSON):
+    Return a single JSON object matching this schema (no prose outside the JSON):
     {
       "narrative": "what happened, vividly described",
       "combat_log": [{"action": "...", "target": "...", "roll": "1d20+5 = 18", "result": "Hit! 8 slashing"}],

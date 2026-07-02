@@ -1,10 +1,7 @@
 # Tomb of Annihilation — Asset Index
 
-This file is a lookup index for the adventure's images. **For an LLM agent:** match the user's request against the *Description* column, then build the image URL by appending the *File* value to the **Base URL** shown at the top of that section.
+This file is a lookup index for the adventure's images. **For an LLM agent:** match the user's request against the *Description* column, and return the corresponding *URL* and *Description*.
 
-**Base URL (all sections):** `https://raw.githubusercontent.com/5etools-mirror-3/5etools-img/main/adventure/ToA/`
-
-So a *File* of `004-0201.webp` resolves to `https://raw.githubusercontent.com/5etools-mirror-3/5etools-img/main/adventure/ToA/004-0201.webp`.
 
 Tips for matching:
 - A user asking to *show players* a location wants an **Area Map (Player)** or **Player Handout**, not the DM map.
@@ -20,9 +17,7 @@ Tips for matching:
 
 Splash/title illustrations that open each chapter. Use for chapter intros or section headers.
 
-Base URL: `https://raw.githubusercontent.com/5etools-mirror-3/5etools-img/main/adventure/ToA/`
-
-| File | Description |
+| URL | Description |
 |------|-------------|
 | `004-0201.webp` | Chapter 1: Port Nyanzaru |
 | `017-0301.webp` | Chapter 2: The Land of Chult |
@@ -34,9 +29,7 @@ Base URL: `https://raw.githubusercontent.com/5etools-mirror-3/5etools-img/main/a
 
 Detailed location maps **with DM secrets** (traps, hidden rooms, labels). Use when running an encounter or describing a location's layout. For a version safe to show players, see the matching entry in Area Maps (Player).
 
-Base URL: `https://raw.githubusercontent.com/5etools-mirror-3/5etools-img/main/adventure/ToA/`
-
-| File | Description |
+| URL | Description |
 |------|-------------|
 | `005-0202.webp` | Map 1.1: Port Nyanzaru |
 | `014-0210.webp` | Map 1.2: Merchant Prince's Villa |
@@ -69,40 +62,36 @@ Base URL: `https://raw.githubusercontent.com/5etools-mirror-3/5etools-img/main/a
 
 Player-safe handout versions of the area maps with DM secrets removed. Use when sharing a map directly with players.
 
-Base URL: `https://raw.githubusercontent.com/5etools-mirror-3/5etools-img/main/adventure/ToA/`
-
-| File | Description |
+| URL | Description |
 |------|-------------|
-| `006-0202a.webp` | Port Nyanzaru |
-| `015-0210a.webp` | Merchant Prince's Villa |
-| `022-0305a.webp` | Camp Righteous |
-| `024-0306a.webp` | Camp Vengeance |
-| `026-0307a.webp` | Dungrunglung |
-| `030-0309a.webp` | Fort Beluarian |
-| `033-0312a.webp` | Heart of Ubtao |
-| `035-0313a.webp` | Hrakhamar |
-| `038-0315a.webp` | Jahaka Anchorage |
-| `041-0317a.webp` | Kir Sabal |
-| `044-0319a.webp` | Nangalore |
-| `047-0321a.webp` | Wyrmheart Mine |
-| `050-0323a.webp` | Yellyark |
-| `054-304a.webp` | Omu |
-| `057-305a.webp` | Nine Shrines of Omu |
-| `062-402a.webp` | Fane of the Night Serpent |
-| `067-505a.webp` | Rotten Halls |
-| `070-506a.webp` | Dungeon of Deception |
-| `075-509a.webp` | Vault of Reflection |
-| `078-512a.webp` | Chambers of Horror |
-| `083-515a.webp` | Gears of Hate |
-| `087-520a.webp` | Cradle of the Death God |
+| `006-0202a.webp` | Map 1.1: Port Nyanzaru |
+| `015-0210a.webp` | Map 1.2: Merchant Prince's Villa |
+| `022-0305a.webp` | Map 2.3: Camp Righteous |
+| `024-0306a.webp` | Map 2.4: Camp Vengeance |
+| `026-0307a.webp` | Map 2.5: Dungrunglung |
+| `030-0309a.webp` | Map 2.7: Fort Beluarian |
+| `033-0312a.webp` | Map 2.8: Heart of Ubtao |
+| `035-0313a.webp` | Map 2.9: Hrakhamar |
+| `038-0315a.webp` | Map 2.10: Jahaka Anchorage |
+| `041-0317a.webp` | Map 2.11: Kir Sabal |
+| `044-0319a.webp` | Map 2.12: Nangalore |
+| `047-0321a.webp` | Map 2.14: Wyrmheart Mine |
+| `050-0323a.webp` | Map 2.15: Yellyark |
+| `054-304a.webp` | Map 3.1: Omu |
+| `057-305a.webp` | Map 3.2: Nine Shrines of Omu |
+| `062-402a.webp` | Map 4.1: Fane of the Night Serpent |
+| `067-505a.webp` | Map 5.1: Rotten Halls |
+| `070-506a.webp` | Map 5.2: Dungeon of Deception |
+| `075-509a.webp` | Map 5.3: Vault of Reflection |
+| `078-512a.webp` | Map 5.4: Chambers of Horror |
+| `083-515a.webp` | Map 5.5: Gears of Hate |
+| `087-520a.webp` | Map 5.6: Cradle of the Death God |
 
 ## Characters & Scenes
 
 NPC portraits and scene/mood illustrations. Use to show players what a named NPC, creature, or location looks like.
 
-Base URL: `https://raw.githubusercontent.com/5etools-mirror-3/5etools-img/main/adventure/ToA/`
-
-| File | Description |
+| URL | Description |
 |------|-------------|
 | `000-0101.webp` | Teleporting to Chult |
 | `001-0102.webp` | Chultans |
@@ -145,9 +134,7 @@ Base URL: `https://raw.githubusercontent.com/5etools-mirror-3/5etools-img/main/a
 
 Appendix E handouts meant to be shown to players: NPC portraits, puzzle clues, letters, journal excerpts, and player maps.
 
-Base URL: `https://raw.githubusercontent.com/5etools-mirror-3/5etools-img/main/adventure/ToA/`
-
-| File | Description |
+| URL | Description |
 |------|-------------|
 | `091-ph01.webp` | Handout 1: Players' Map of Chult |
 | `092-ph02.webp` | Handout 2: Azaka Stormfang |
@@ -170,7 +157,7 @@ Base URL: `https://raw.githubusercontent.com/5etools-mirror-3/5etools-img/main/a
 | `109-ph19.webp` | Handout 19: Acererak's Third Warning |
 | `110-ph20.webp` | Handout 20: Acererak's Fourth Warning |
 | `111-ph21.webp` | Handout 21: Devlin's Journal Excerpt |
-| `112-ph22.webp` | Handout 22: Withers's Journal Excerpt |
+| `112-ph22.webp` | Handout 22: Withers's Journal Excerpt | 
 | `113-ph23.webp` | Handout 23: Hieroglyphic Floor |
 | `114-ph24.webp` | Handout 24: Control Panel |
 
@@ -178,9 +165,7 @@ Base URL: `https://raw.githubusercontent.com/5etools-mirror-3/5etools-img/main/a
 
 Mechanical/puzzle diagrams to aid the DM in running a specific trap or puzzle.
 
-Base URL: `https://raw.githubusercontent.com/5etools-mirror-3/5etools-img/main/adventure/ToA/`
-
-| File | Description |
+| URL | Description |
 |------|-------------|
 | `068-503.webp` | Diagram 5.1: Sample Puzzle Cube Configuration |
 | `076-510.webp` | Diagram 5.2: Revolving Room Trap |
@@ -189,9 +174,7 @@ Base URL: `https://raw.githubusercontent.com/5etools-mirror-3/5etools-img/main/a
 
 Large fold-out poster maps (Chult overview).
 
-Base URL: `https://raw.githubusercontent.com/5etools-mirror-3/5etools-img/main/adventure/ToA/`
-
-| File | Description |
+| URL | Description |
 |------|-------------|
 | `120-pm01.webp` | Poster Map, Side 1 (DM Version) |
 | `120-pm02.webp` | Poster Map, Side 2 (Player Version) |

@@ -8,7 +8,7 @@ class CampaignMetadata(BaseModel):
     """Metadata for the current scene."""
     chapter: Optional[str] = Field(default=None, description="The current chapter of the adventure")
     section: Optional[str] = Field(default=None, description="The current section or location name")
-    asset_urls: List[str] = Field(default_factory=list, description="URLs to any visual assets for the scene")
+    assets: List[Dict] = Field(default_factory=list, description="Files and descriptions to any visual assets for the scene")
     gm_notes: Optional[str] = Field(default=None, description="Private GM notes for the current scene (key NPCs, threats, opportunities)")
     next_scene_suggestions: List[str] = Field(default_factory=list, description="Suggested next scenes or story directions")
     suggested_actions: List[str] = Field(default_factory=list, description="Suggested next actions offered to the player")
@@ -147,7 +147,7 @@ def update_campaign(
         progress: Optional completion percentage (0-100).
         scene: Title of the current scene. (Requires description, metadata, initiative, and party to append a turn)
         description: Natural language description of the current situation.
-        metadata: CampaignMetadata object containing chapter, section, asset_urls,
+        metadata: CampaignMetadata object containing chapter, section, assets,
                   gm_notes, next_scene_suggestions, and suggested_actions.
         initiative: Ordered list of characters in initiative order.
         party: PartyState object mapping character names to their hp, max_hp, and conditions.
@@ -203,12 +203,17 @@ def update_campaign(
             "metadata": _dump(metadata) if metadata is not None else last.get("metadata"),
             "initiative": initiative if initiative is not None else last.get("initiative"),
             "party": _dump(party) if party is not None else last.get("party"),
-            "npc_name": npc_name if npc_name is not None else last.get("npc_name"),
             "narrative": narrative if narrative is not None else last.get("narrative"),
-            "dialogue": [_dump(d) for d in dialogue] if dialogue is not None else last.get("dialogue"),
             "intent": intent if intent is not None else last.get("intent"),
             "created_dt": now
         }
+
+        if npc_name:
+            new_snapshot['npc_name'] = npc_name
+
+        if dialogue:
+            new_snapshot['dialogue'] = [_dump(d) for d in dialogue]
+        
         update_ops["$push"] = {"state": new_snapshot}
         
     col.update_one(

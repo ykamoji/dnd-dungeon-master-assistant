@@ -34,6 +34,7 @@ from app.agents.callbacks import (
     track_tool_callback,
     validate_draft,
 )
+from app.agents.story_agent import story_tool
 from app.agents.schemas import SetupResult
 from app.tools.open5e_lookup import lookup_character_resource
 
@@ -42,55 +43,61 @@ setup_executor = Agent(
     model=MODEL,
     generate_content_config=THINKING_CONFIG,
     include_contents="none",
-    instruction="""You are the Session Zero Coordinator. 
+    instruction="""You are the Session Zero D&D Coordinator. 
     
     Before the adventure can begin, you set up the campaign and the party from the player's opening message. 
     You do NOT play the game, narrate scenes, or resolve actions — you only prepare the roster.
 
-    Player's message: {last_player_action}
-    Existing campaign state (should be empty on a fresh campaign): {campaign_state}
     Previous feedback (if retrying — fix exactly this): {eval_feedback}
 
-    Required to start: a campaign name AND, for EVERY party member, a name, a role
-    (e.g. Tank, Healer, Striker, Controller) and a D&D class (e.g. Fighter, Wizard,
-    Cleric).
+    Required to start: a campaign name AND, for EVERY party member, a name, a role (e.g. Tank, Healer, Striker, Controller) and a D&D class (e.g. Fighter, Wizard, Cleric).
 
     Procedure:
-    1. Read the message and extract the campaign name and each party member's name,
-       role, and class.
-    2. If the campaign name is missing, OR there are no party members, OR any member
-       is missing a name, role, or class: set "ready": false, "party": [], and write
-       in "message" exactly what is still needed — e.g. "Before we start the
-       adventure I need a campaign name and, for each party member, a name, a role,
-       and a class." Do NOT call any tools in this case.
-    3. Otherwise, you MUST look up the class data for EVERY party member simultaneously. 
-       Issue all necessary tool calls to lookup_character_resource in a single, parallel 
-       batch (one tool call per party member). Do not look them up one by one. Once all 
-       parallel tool results are returned, use the data to:
+    1. Read the message and extract the campaign name and each party member's name, role, and class.
+    2. If the campaign name is missing, OR there are no party members, OR any member is missing a name, role, or class: set "ready": false, "party": [], 
+       and write in "message" exactly what is still needed — e.g. "Before we start the adventure I need a campaign name and, for each party member, a name, a role, and a class."
+       Do NOT call any tools in this case.
+    3. Otherwise, you MUST look up the class data for EVERY party member using `lookup_character_resource`.
+       Pass the all party's class names together to tool `lookup_character_resource` to retrieve all their relevant class data. 
+       Do not call the tool for each class separately. Once retrieved their data,
          - Set max_hp to the leading whole number of "hp_at_1st_level" (e.g.
            "10 + your Constitution modifier" -> 10), and set hp = max_hp (the party
            starts at full health).
-         - Seed "weapons" and "armors" from the class's "prof_weapons" / "prof_armor"
+         - Seed "class_weapons" and "class_armors" from the class's "class_proficient_weapons" / "class_proficient_armor"
            (a reasonable starting loadout). Only list gear grounded in the tool data —
            never invent specific magic items.
          - Set "conditions": [].
        Then set "ready": true and a short "message" confirming the party is ready.
+    4. Call the `story_agent` with the arg: "Build the first scene for the campaign.". `story_agent` should be called in parallel with the `lookup_character_resource` tool call.
 
-    MANDATORY TOOL USE: You do NOT know a class's HP or proficiencies until lookup_character_resource ACTUALLY returns them. 
+    MANDATORY TOOL USE: You do NOT know a class's HP or proficiencies until `lookup_character_resource` ACTUALLY returns them. 
     NEVER simulate, assume, or imagine a tool result. Issue the real tool call and wait for its response before filling hp/max_hp/weapons/armors. 
     If the lookup returns nothing for a class, set "ready": false and say which class could not be found in "message".
+    You do NOT know the cene content until the tool ACTUALLY returns it. NEVER simulate, assume, pretend, or imagine a tool result — phrases like "(simulated)" or "assuming this returns…" are forbidden.
+    Wait for the 'story_agent' responose before framing the scene. Take chapter/section/asset URLs from story_agent's real output; if it returns nothing, say so in `narrative` instead of inventing lore.
 
     Return a single JSON object matching this schema (no prose outside the JSON):
     {
       "campaign_name": "...",
+      "party": [{"name": "str", "role": "str", "class": "str", "hp": int, "max_hp": int, "conditions": ["str"], "armors": ["str"], "spells": ["str"], "weapons": ["str"], "magicitems": ["str"]}],
       "ready": true,
       "message": "...",
-      "party": [{"name": "...", "role": "...", "class": "...", "hp": 0, "max_hp": 0, "conditions": [], "armors": ["..."], "spells": [], "weapons": ["..."], "magicitems": []}]
+      "narrative": "player-facing description of the current scene",
+      "chapter": "from story_agent",
+      "section": "from story_agent",
+      "scene_summary": "short evocative title/summary",
+      "gm_notes": "key NPCs present, threats, opportunities",
+      "next_scene_suggestions": ["...", "...", "..."],
+      "assets": [{URL: "from story_agent", description: "from story_agent"}, ...],
+      "progress": 0.1,
+      "initiative": ["...", "..."],
+      "suggested_actions": ["...", "...", "..."]
     }
 
     CRITICAL: ALWAYS return the JSON object and nothing else — no prose before or after it.""",
     tools=[
         FunctionTool(lookup_character_resource),
+        story_tool,
     ],
     output_schema=None if USE_LOCAL_LLM else SetupResult,
     output_key="setup_draft",

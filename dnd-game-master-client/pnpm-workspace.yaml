@@ -1,0 +1,3 @@
+allowBuilds:
+  '@3d-dice/dice-box': false
+  sharp: false
