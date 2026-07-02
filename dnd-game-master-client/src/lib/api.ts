@@ -5,7 +5,7 @@
 // FastAPI backend by next.config.ts rewrites (no CORS). Set it to an absolute
 // origin only if you bypass the proxy.
 
-import type { Campaign, CampaignSummary, ClassProfile } from "./types";
+import type { Campaign, CampaignSummary, ClassProfile, SessionEvent } from "./types";
 
 export const ROOT_API = "";
 
@@ -85,6 +85,30 @@ export function healthDb(): Promise<{ status: string }> {
   return getJSON("/health/db");
 }
 
+/**
+ * GET /api/live-token — mint a short-lived, single-use ephemeral token for a
+ * Gemini Live session. The browser uses this token as an API key to connect
+ * directly to Gemini; the real key never leaves the backend.
+ *
+ * `type: "text"` (default) yields a speech-to-text (TEXT output) token;
+ * `type: "audio"` yields a text-to-speech (AUDIO output) token, optionally
+ * performed with an `emotion` tone.
+ */
+export function getLiveToken(opts?: {
+  type?: "text" | "audio";
+  emotion?: string;
+  voiceName?: string;
+}): Promise<{ token: string; model: string }> {
+  const q = new URLSearchParams();
+  if (opts?.type) q.set("type", opts.type);
+  if (opts?.emotion) q.set("emotion", opts.emotion);
+  if (opts?.voiceName) q.set("voice_name", opts.voiceName);
+  const qs = q.toString();
+  return getJSON<{ token: string; model: string }>(
+    `/api/live-token${qs ? `?${qs}` : ""}`,
+  );
+}
+
 // ---------------------------------------------------------------------------
 // ADK run lifecycle (ambient submit → SSE event stream → approve/reject).
 //
@@ -133,6 +157,11 @@ export async function submitTurn(args: {
  */
 export function sessionStreamUrl(sessionId: string): string {
   return `${ROOT_API}/ambient/sessions/${encodeURIComponent(sessionId)}/stream`;
+}
+
+/** GET /ambient/sessions/{session_id}/invocations/{invocation_id}/events */
+export function getHistoricalEvents(sessionId: string, invocationId: string): Promise<SessionEvent[]> {
+  return getJSON<SessionEvent[]>(`/ambient/sessions/${encodeURIComponent(sessionId)}/invocations/${encodeURIComponent(invocationId)}/events`);
 }
 
 /**

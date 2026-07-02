@@ -85,7 +85,7 @@ export function EventTimeline({ events, running }: EventTimelineProps) {
               {/* Dot on the rail. */}
               <span
                 className={`absolute left-1/2 top-1/2 z-10 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 ${isNewest ? "border-gold-bright bg-gold" : "border-stone-2 bg-stone"
-                  } ${isNewest ? "animate-ping" : ""}`}
+                  } ${isNewest && running ? "animate-ping" : ""}`}
               />
 
               {/* Left cell holds even-index events; right cell the odd ones. */}

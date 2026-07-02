@@ -39,8 +39,8 @@ export function Card({
       whileHover={{ y: -6 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
       className={`group relative cursor-pointer flex w-full flex-col overflow-hidden rounded-card border text-left transition-colors ${disabled
-          ? "border-stone-2 opacity-80"
-          : "border-gold/30 hover:border-gold"
+        ? "border-stone-2 opacity-80"
+        : "border-gold/30 hover:border-gold"
         }`}
     >
       <div className="relative aspect-[3/4] w-full overflow-hidden bg-stone">
@@ -53,7 +53,7 @@ export function Card({
         />
         <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/30 to-transparent" />
         {badge && (
-          <span className="absolute right-2 top-2 rounded-full border border-gold/40 bg-obsidian/80 px-3 py-1 font-display text-[10px] uppercase tracking-widest text-gold-bright">
+          <span className="absolute right-2 top-12 rounded-full border border-gold/40 bg-obsidian/80 px-3 py-1 font-display text-[10px] uppercase tracking-widest text-gold-bright">
             {badge}
           </span>
         )}

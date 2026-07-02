@@ -61,6 +61,7 @@ export interface DialogueLine {
   speaker: string;
   text: string;
   emotion: string;
+  gender?: string;
 }
 
 /** A single combat-log entry within a turn's metadata. */
@@ -106,6 +107,7 @@ export interface CampaignMetadata {
   combat_log?: CombatEntry[];
   math_breakdown?: string | null;
   requires_roll?: boolean;
+  invocation_id?: string;
 }
 
 /** One turn snapshot in a campaign's history. */

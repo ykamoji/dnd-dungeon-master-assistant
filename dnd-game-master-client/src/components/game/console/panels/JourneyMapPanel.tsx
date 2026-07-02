@@ -93,15 +93,6 @@ export function JourneyMapPanel({ orientation = "vertical" }: JourneyMapPanelPro
     );
   }
 
-  // Vertical serpentine: a center line with nodes alternating left / right.
-  const dot = (active: boolean) => (
-    <span
-      className={`absolute left-1/2 top-5 h-3 w-3 -translate-x-1/2 rounded-full border-2 ${active ? "border-gold-bright bg-gold" : "border-stone-2 bg-stone"
-        }`}
-      aria-hidden
-    />
-  );
-
   return (
     <div className="flex h-full flex-col">
       <PanelHeading />
@@ -109,32 +100,35 @@ export function JourneyMapPanel({ orientation = "vertical" }: JourneyMapPanelPro
         ref={(el) => {
           scrollRef.current = el;
         }}
-        className="scroll-thin relative flex-1 overflow-y-auto pr-1"
+        className="[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] relative flex-1 overflow-y-auto pr-1"
       >
-        <span className="pointer-events-none absolute bottom-0 left-1/2 top-0 w-px -translate-x-1/2 bg-gradient-to-b from-gold/40 via-stone-2 to-transparent" />
         <ol className="relative space-y-5 py-2">
-          {history.map((snap, i) => (
-            <li
-              key={i}
-              ref={historyActive(i) ? activeRef : undefined}
-              className={`flex ${i % 2 === 0 ? "justify-start" : "justify-end"}`}
-            >
-              {dot(historyActive(i))}
-              <TrailNode
-                turn={i + 1}
-                snapshot={snap}
-                active={historyActive(i)}
-                isLatest={!pending && i === history.length - 1}
-                onClick={() => selectTurn(i)}
-              />
-            </li>
-          ))}
+          <span className="pointer-events-none absolute bottom-0 left-1/2 top-0 w-px bg-gold/20" />
+          {history.map((snap, i) => {
+            const active = historyActive(i);
+            return (
+              <li
+                key={i}
+                ref={active ? activeRef : undefined}
+                className={`relative flex w-full ${i % 2 === 0 ? "justify-start" : "justify-end"}`}
+              >
+                {/* {dot(active)} */}
+                <TrailNode
+                  turn={i + 1}
+                  snapshot={snap}
+                  active={active}
+                  isLatest={!pending && i === history.length - 1}
+                  onClick={() => selectTurn(i)}
+                />
+              </li>
+            );
+          })}
           {pending && (
             <li
               ref={viewPending ? activeRef : undefined}
-              className={`flex ${history.length % 2 === 0 ? "justify-start" : "justify-end"}`}
+              className={`relative flex w-full ${history.length % 2 === 0 ? "justify-start" : "justify-end"}`}
             >
-              {dot(viewPending)}
+              {/* {dot(viewPending)} */}
               <TrailNode turn={pendingTurn} pending active={viewPending} onClick={selectPending} />
             </li>
           )}

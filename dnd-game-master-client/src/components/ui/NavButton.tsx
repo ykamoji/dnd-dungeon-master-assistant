@@ -10,7 +10,7 @@ interface NavButtonProps {
 /** Corner navigation arrow for the scroll-locked game stage. */
 export function NavButton({ direction, onClick, disabled, label }: NavButtonProps) {
   return (
-    <button
+    !disabled ? <button
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
@@ -20,8 +20,8 @@ export function NavButton({ direction, onClick, disabled, label }: NavButtonProp
       {direction === "up" && <Chevron up />}
       <span className="font-display text-xs uppercase tracking-widest">{label}</span>
       {direction === "down" && <Chevron />}
-    </button>
-  );
+    </button> : <></>
+  )
 }
 
 function Chevron({ up = false }: { up?: boolean }) {
