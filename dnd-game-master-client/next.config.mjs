@@ -19,6 +19,9 @@ const BACKEND_PATHS = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Emit a self-contained server (.next/standalone/server.js) for a minimal
+  // Docker runtime image — no node_modules copy, faster Cloud Run cold starts.
+  output: "standalone",
   compress: false, // Disable compression to prevent Next.js from buffering SSE streams
   images: {
     // Cover art / stills are proxied from the 5etools mirror used by the backend.

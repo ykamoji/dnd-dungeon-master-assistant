@@ -16,8 +16,8 @@ in `../dnd-game-master-agent`.
   accent), EB Garamond (body) — wired in `src/app/layout.tsx`
 
 ## Commands
-- `npm run dev` — dev server on http://localhost:3000
-- `npm run build` / `npm start` — production build / serve
+- `pnpm run dev` — dev server on http://localhost:3000
+- `pnpm run build` / `pnpm start` — production build / serve
 - Backend must be running on :8000 (or set `BACKEND_ORIGIN`) for live data.
 
 ## Architecture
@@ -122,7 +122,7 @@ handler, whose `_extract_player_action` accepts an object directly.
   errors), the install is corrupted — check `package.json` `next` version and
   `node_modules/.ignored/next`. Fix the version pin (16.2.9) and reinstall.
 - `package.json` may carry a stray `"packageManager": "pnpm@…"` from
-  scaffolding; we use **npm**.
+  scaffolding; we use **pnpm**.
 
 ## Layout
 ```

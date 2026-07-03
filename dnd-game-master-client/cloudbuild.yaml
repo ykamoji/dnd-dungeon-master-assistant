@@ -1,0 +1,17 @@
+# Cloud Build config for the Next.js client.
+# Builds the Docker image with BACKEND_ORIGIN baked in at build time (Next.js
+# rewrites are resolved during `next build`), then pushes it to Artifact Registry.
+# Invoked by deploy.sh via `gcloud builds submit --config cloudbuild.yaml`.
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - build
+      - --build-arg
+      - 'BACKEND_ORIGIN=${_BACKEND_ORIGIN}'
+      - -t
+      - '${_IMAGE}'
+      - .
+images:
+  - '${_IMAGE}'
+options:
+  logging: CLOUD_LOGGING_ONLY

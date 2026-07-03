@@ -4,6 +4,10 @@
 # Re-runnable: run it any time to push the current code. Minimal-cost config
 # (scale-to-zero, single instance) suitable for a demo/prototype.
 #
+# On each run Cloud Run replaces the running container with a fresh revision,
+# and the script prunes older image versions from Artifact Registry (keeping only
+# the just-deployed one) so old builds don't pile up.
+#
 # Usage:  ./deploy.sh            # deploy
 #         ./deploy.sh --dry-run  # print the gcloud command without running it
 #
@@ -16,17 +20,26 @@ PROJECT="dnd-game-master-501218"
 REGION="us-east1"
 SERVICE="dnd-game-master-agent"
 ENV_FILE="cloudrun.env.yaml"
+# gcloud run deploy --source pushes the built image here (repo/image = service).
+REPO="cloud-run-source-deploy"
+IMAGE_PATH="${REGION}-docker.pkg.dev/${PROJECT}/${REPO}/${SERVICE}"
 
 # Minimal-cost sizing for a demo:
 #   min-instances 0 → scale to zero, no idle billing (cold start on first hit)
 #   max-instances 1 → one instance, so the SQLite⇄Mongo session store has a
 #                     single writer (no cross-instance divergence) and cost is capped
 #   default CPU throttling (CPU billed only during requests) → cheapest
+#
+# concurrency must be HIGH because max-instances is pinned at 1: total capacity =
+# concurrency (Cloud Run can't scale out). A console page load fires a burst of
+# parallel fetches PLUS a long-lived SSE stream that holds a slot for the whole
+# turn, so a low value (e.g. 8) causes 429 "Too Many Requests". The backend is
+# async/IO-bound (waits on the model/Mongo), so 80 is safe for a demo.
 CPU="1"
-MEMORY="1Gi"          # bump to 2Gi if you see OOM / 503 on cold start
+MEMORY="2Gi"          # headroom for higher concurrency; lower to 1Gi to cut cost
 MIN_INSTANCES="0"
-MAX_INSTANCES="1"
-CONCURRENCY="8"
+MAX_INSTANCES="1"     # keep at 1 — single SQLite writer for the session sync
+CONCURRENCY="80"
 
 DRY_RUN=""
 [[ "${1:-}" == "--dry-run" || "${1:-}" == "-n" ]] && DRY_RUN="1"
@@ -92,11 +105,32 @@ DEPLOY_ARGS=(
 if [[ -n "$DRY_RUN" ]]; then
   echo "DRY RUN — would execute:"
   echo "gcloud ${DEPLOY_ARGS[*]}"
+  echo "then prune old images under: ${IMAGE_PATH}"
   exit 0
 fi
 
 echo "🚀 Deploying $SERVICE to Cloud Run (Cloud Build will build the Dockerfile from source)…"
 gcloud "${DEPLOY_ARGS[@]}"
+
+# ── Prune old images ─────────────────────────────────────────────────────────
+# Keep the newest version (the one just deployed) and delete the rest so old
+# builds don't accumulate in Artifact Registry.
+echo "🧹 Pruning old images in ${IMAGE_PATH} (keeping the newest)…"
+OLD_DIGESTS="$(gcloud artifacts docker images list "$IMAGE_PATH" \
+  --project "$PROJECT" --sort-by="~CREATE_TIME" --format="value(version)" 2>/dev/null | tail -n +2)"
+if [[ -n "$OLD_DIGESTS" ]]; then
+  while IFS= read -r DIGEST; do
+    [[ -z "$DIGEST" ]] && continue
+    if gcloud artifacts docker images delete "${IMAGE_PATH}@${DIGEST}" \
+         --project "$PROJECT" --delete-tags --quiet >/dev/null 2>&1; then
+      echo "   deleted ${DIGEST}"
+    else
+      echo "   ⚠️  could not delete ${DIGEST} (in use or already gone)"
+    fi
+  done <<< "$OLD_DIGESTS"
+else
+  echo "   nothing to prune."
+fi
 
 URL="$(gcloud run services describe "$SERVICE" --project "$PROJECT" --region "$REGION" --format='value(status.url)')"
 echo ""

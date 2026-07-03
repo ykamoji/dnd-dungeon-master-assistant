@@ -1,0 +1,14 @@
+# Keep the build context lean and secrets out of the image.
+node_modules
+.next
+.git
+.env
+.env.*
+npm-debug.log*
+pnpm-debug.log*
+Dockerfile
+.dockerignore
+cloudbuild.yaml
+cloudrun.env.yaml
+deploy.sh
+README.md
