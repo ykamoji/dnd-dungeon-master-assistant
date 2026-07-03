@@ -21,3 +21,7 @@ app/.env
 deployment/
 tests/
 .google-agents-cli/
+
+# Cloud Run env file (secrets; not needed in image)
+cloudrun.env.yaml
+deploy.sh
