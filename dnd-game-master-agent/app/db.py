@@ -26,6 +26,22 @@ def get_campaigns_col() -> Collection:
     col_name = os.environ.get("CAMPAIGN_COLLECTION", "campaigns")
     return db[col_name]
 
+def get_sessions_col() -> Collection:
+    """Durable backing store for ADK sessions (metadata + state, sans events).
+
+    Used only when the in-memory session service is active (Cloud Run/docker);
+    see app/session_store.py.
+    """
+    db = get_db()
+    col_name = os.environ.get("SESSION_COLLECTION", "sessions")
+    return db[col_name]
+
+def get_events_col() -> Collection:
+    """Durable backing store for ADK events (one document per event)."""
+    db = get_db()
+    col_name = os.environ.get("EVENT_COLLECTION", "events")
+    return db[col_name]
+
 def check_health() -> Dict[str, str]:
     try:
         client = get_client()

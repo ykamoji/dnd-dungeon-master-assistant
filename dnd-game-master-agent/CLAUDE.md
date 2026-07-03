@@ -85,10 +85,21 @@ specialist in isolation MUST seed `campaign_state` or ADK raises KeyError.
   `get_campaigns_col()`; CRUD in `app/tools/campaign.py`:
   `get_campaign`, `update_campaign`). Doc: `campaign_id, campaign_name, summary,
   progress, state[]` (turn snapshots).
-- **ADK sessions** = per-run event/decision trace. Locally `get_fast_api_app`
-  with `use_local_storage=True` (and not Cloud Run) persists to **per-agent
-  SQLite at `app/.adk/session.db`** (same DB the rewind endpoint reads). On
-  Cloud Run it falls back to in-memory unless `SESSION_SERVICE_URI` is set.
+- **ADK sessions** = per-run event/decision trace. The session service is the
+  process-wide `shared://session` singleton in `app/app_utils/services.py`
+  (server, ambient Runner, and persistence hooks all share ONE instance). It
+  resolves to: prod `SESSION_SERVICE_URI` / Agent Engine → local SQLite at
+  `app/.adk/session.db` when `SESSION_DB_LOCAL=1` (same DB the rewind endpoint +
+  `dump_session_trace.py` read) → else **in-memory** (Cloud Run default).
+- **In-memory is now durable via MongoDB** (`app/session_store.py`): when the
+  service is in-memory, every turn is persisted to Mongo collections `sessions`
+  (metadata+state, one doc/session) and `events` (one doc/event) by
+  `MongoSessionPersistPlugin` (`after_run_callback`, fires on ambient AND `/run`
+  HITL resume), sessions are rehydrated on boot via the FastAPI `lifespan`
+  (`restore_all`, replays events on empty state — skips `partial`), and flushed
+  on shutdown. All a **no-op** when the service is durable (SQLite/prod), so
+  local dev is unchanged. Collections overridable via
+  `SESSION_COLLECTION`/`EVENT_COLLECTION`.
 
 ## Data & schemas
 - `app/agents/schemas.py` — `CampaignResult`, `ActionResult`, `NpcResult`,

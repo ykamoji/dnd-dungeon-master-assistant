@@ -375,8 +375,15 @@ root_agent = Workflow(
 # ResumabilityConfig enables the HITL RequestInput to pause and resume.
 # App name MUST match the directory name ("app") or eval will fail.
 
+# The persist plugin fires after every invocation on EVERY surface (ambient
+# Pub/Sub + built-in /run HITL resume), backing the ephemeral in-memory session
+# service with MongoDB. It's a no-op when the session service is durable (local
+# SQLite / prod SESSION_SERVICE_URI). See app/session_store.py.
+from app.session_store import MongoSessionPersistPlugin
+
 app = App(
     name="app",
     root_agent=root_agent,
     resumability_config=ResumabilityConfig(is_resumable=True),
+    plugins=[MongoSessionPersistPlugin()],
 )

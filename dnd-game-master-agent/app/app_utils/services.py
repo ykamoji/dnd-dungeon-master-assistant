@@ -54,9 +54,15 @@ def get_session_service():
             or os.environ.get("GOOGLE_CLOUD_LOCATION"),
             agent_engine_id=agent_engine_id,
         )
-    from google.adk.sessions.in_memory_session_service import InMemorySessionService
-
-    return InMemorySessionService()
+    # Always use durable per-agent SQLite (app/.adk/session.db) locally or in Docker.
+    # We sync this SQLite database directly with MongoDB in app/session_store.py.
+    db_path = os.path.join(_AGENT_DIR, "app", ".adk", "session.db")
+    # The .adk dir is .dockerignore'd, so ensure it exists before ADK opens
+    # the SQLite file (otherwise "unable to open database file").
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    return create_session_service_from_options(
+        base_dir=_AGENT_DIR, session_service_uri=f"sqlite:///{db_path}"
+    )
 
 
 @functools.cache

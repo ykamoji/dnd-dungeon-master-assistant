@@ -43,27 +43,22 @@ import logging
 import os
 
 from fastapi import APIRouter, Request, Response
-from google.adk.cli.utils.service_factory import create_session_service_from_options
 from google.adk.runners import Runner
 from google.genai import types
 
 from app.agent import app as gm_app
+from app.app_utils.services import get_session_service
 
 logger = logging.getLogger("dnd.ambient")
 
 AGENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Build the session service with the SAME options the server (get_fast_api_app)
-# uses, so the Pub/Sub handler and the built-in /run resume endpoint share one
-# store: per-agent local SQLite (app/.adk/session.db) by default, or whatever
-# SESSION_SERVICE_URI points at in production.
-db_path = os.path.join(AGENT_DIR,  "app", ".adk", "session.db")
-local_db_url = f"sqlite:///{db_path}"
-_session_service = create_session_service_from_options(
-    base_dir=AGENT_DIR,
-    session_service_uri=local_db_url if os.getenv("SESSION_DB_LOCAL") else os.getenv("SESSION_SERVICE_URI"),
-    use_local_storage=os.getenv("SESSION_DB_LOCAL")
-)
+# Use the process-wide shared:// singleton so the Pub/Sub handler, the built-in
+# /run resume endpoint (get_fast_api_app), and the persistence hooks all touch
+# ONE session service: prod SESSION_SERVICE_URI / Agent Engine, else local SQLite
+# (SESSION_DB_LOCAL=1), else in-memory (Cloud Run, backed by Mongo via
+# app/session_store.py).
+_session_service = get_session_service()
 
 # app_name MUST be the ADK app name ("app") — the same name _ensure_session
 # creates sessions under and the built-in session/run endpoints + the client use.
