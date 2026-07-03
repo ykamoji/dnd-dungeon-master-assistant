@@ -2,8 +2,10 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-# Hosted default (unchanged behavior)
-_HOSTED_MODEL = os.getenv("GOOGLE_MODEL", "")
+# Hosted default (unchanged behavior). Strip surrounding whitespace/quotes:
+# `docker run --env-file` passes values literally, so GOOGLE_MODEL="gemini-..."
+# in an env file would otherwise include the quotes and break LLMRegistry.resolve.
+_HOSTED_MODEL = os.getenv("GOOGLE_MODEL", "").strip().strip("\"'")
 
 # Local dev: route through a local Ollama model to avoid Google API rate limits.
 # Enable with USE_LOCAL_LLM=1 (and `ollama run gemma4:e2b-mxfp8` running locally).

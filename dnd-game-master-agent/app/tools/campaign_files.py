@@ -15,8 +15,9 @@ def fetch_campaign_files(paths: List[str]) -> List[Dict[str, str]]:
     "Tomb-of-Annihilation/". Both are normalized here so the caller never has to
     reformat an index link.
     """
+    # docs/ and assets/ live inside the agent dir (= agent_root).
     agent_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    project_root = os.path.dirname(agent_root)
+    project_root = agent_root
     base_docs_dir = os.path.join(project_root, "docs", "Tomb-of-Annihilation")
 
     results = []

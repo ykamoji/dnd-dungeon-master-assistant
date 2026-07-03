@@ -13,8 +13,9 @@ def _load_assets():
     if _LOADED:
         return
         
+    # docs/ and assets/ live inside the agent dir (= agent_root).
     agent_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    project_root = os.path.dirname(agent_root)
+    project_root = agent_root
     assets_path = os.path.join(project_root, "assets", "Tomb-of-Annihilation", "ASSETS.md")
     
     if not os.path.exists(assets_path):

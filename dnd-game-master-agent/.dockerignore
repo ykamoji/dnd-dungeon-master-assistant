@@ -1,0 +1,23 @@
+# Build context = the agent dir. Keep the image lean.
+
+# Python caches & local virtualenv (rebuilt via uv sync in-image)
+.venv/
+**/__pycache__/
+**/*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Local ADK session store & logs (must not leak into the image)
+app/.adk/
+logs/
+*.log
+
+# Local env files (secrets injected via Cloud Run --update-env-vars/--secrets)
+.env
+.env.*
+app/.env
+
+# Deployment scaffolding + tests not needed inside the runtime image
+deployment/
+tests/
+.google-agents-cli/

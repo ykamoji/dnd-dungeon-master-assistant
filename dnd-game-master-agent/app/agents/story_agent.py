@@ -7,9 +7,9 @@ from app.agents.callbacks import make_track_agent_callback, track_tool_callback
 from app.agents.schemas import StoryResult
 from app.tools.campaign_files import fetch_campaign_files
 
-# Project root = <repo>/ (story_agent.py is at <repo>/dnd-game-master-agent/app/agents/).
+# docs/ and assets/ live inside the agent dir now, so the index root IS the agent dir.
 _AGENT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-_PROJECT_ROOT = os.path.dirname(_AGENT_ROOT)
+_PROJECT_ROOT = _AGENT_ROOT
 
 
 def _load_index(*rel_parts: str) -> str:

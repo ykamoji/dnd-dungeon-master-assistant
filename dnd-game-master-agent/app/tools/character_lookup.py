@@ -11,8 +11,9 @@ def _load_db():
     if _LOADED:
         return
         
+    # docs/ and assets/ live inside the agent dir (= agent_root).
     agent_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    project_root = os.path.dirname(agent_root)
+    project_root = agent_root
     csv_path = os.path.join(project_root, "docs", "Tomb-of-Annihilation", "Appendix D.csv")
     
     if not os.path.exists(csv_path):
