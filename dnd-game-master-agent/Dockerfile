@@ -12,17 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Self-contained build: context = this dir. docs/ and assets/ now live inside the
+# agent dir, so a plain `gcloud run deploy --source .` from here works.
+
 FROM python:3.12-slim
 
+RUN apt-get update && apt-get install -y sqlite3 && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir uv==0.8.13
 
 WORKDIR /code
 
+# --- Python project (deps first for layer caching, then source) ---
 COPY ./pyproject.toml ./README.md ./uv.lock* ./
-
 COPY ./app ./app
+# pyproject builds packages = ["app", "data"]; data holds the open5e reference JSON.
+COPY ./data ./data
 
 RUN uv sync --frozen
+
+# --- Adventure content (read at runtime; project_root = agent_root = /code) ---
+COPY ./docs ./docs
+COPY ./assets ./assets
 
 ARG COMMIT_SHA=""
 ENV COMMIT_SHA=${COMMIT_SHA}

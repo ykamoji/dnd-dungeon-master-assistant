@@ -310,6 +310,7 @@ def test_setup_result_round_trips_through_validate_draft():
         campaign_name="Tomb of Annihilation",
         ready=True,
         message="Your party is ready.",
+        narrative="The port city of Port Nyanzaru bustles under a blazing sun.",
         party=[{"name": "Bran", "role": "Tank", "class": "Fighter",
                 "hp": 10, "max_hp": 10, "weapons": ["Longsword"], "armors": ["Chain Mail"]}],
     ).model_dump_json(by_alias=True)
@@ -341,7 +342,7 @@ def test_prepare_routes_blocked_for_unsafe_input():
 
 def test_setup_finalize_rejects_without_persisting():
     state = {
-        "setup_result": SetupResult(ready=False, message="I need a campaign name and party.").model_dump_json(),
+        "setup_result": SetupResult(ready=False, message="I need a campaign name and party.", narrative="").model_dump_json(),
         "campaign_id": "sess-test",
         "tools_fired": [],
     }
@@ -357,6 +358,7 @@ def test_setup_finalize_persists_skeleton_with_full_hp():
         campaign_name="Tomb of Annihilation",
         ready=True,
         message="Your party is ready — the adventure begins.",
+        narrative="The port city of Port Nyanzaru bustles under a blazing sun.",
         party=[{"name": "Bran", "role": "Tank", "class": "Fighter",
                 "hp": 10, "max_hp": 10, "weapons": ["Longsword"], "armors": ["Chain Mail"]}],
     )

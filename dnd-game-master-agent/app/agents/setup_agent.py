@@ -68,7 +68,8 @@ setup_executor = Agent(
            never invent specific magic items.
          - Set "conditions": [].
        Then set "ready": true and a short "message" confirming the party is ready.
-    4. Call the `story_agent` with the arg: "Build the first scene for the campaign.". `story_agent` should be called in parallel with the `lookup_character_resource` tool call.
+    4. Call the `story_agent` with the arg: "Build the first scene for the campaign where the players are teleported to chult.". 
+       The tool `story_agent` should be called in parallel with the `lookup_character_resource` tool call.
 
     MANDATORY TOOL USE: You do NOT know a class's HP or proficiencies until `lookup_character_resource` ACTUALLY returns them. 
     NEVER simulate, assume, or imagine a tool result. Issue the real tool call and wait for its response before filling hp/max_hp/weapons/armors. 

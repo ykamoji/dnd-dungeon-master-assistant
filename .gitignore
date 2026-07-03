@@ -1,4 +1,5 @@
 agent_logs
 .DS_Store
 .bcp
+.idea
 __pycache__
