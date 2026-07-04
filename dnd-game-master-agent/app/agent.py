@@ -29,7 +29,7 @@ The pipeline is a directed graph (not a SequentialAgent):
 
 The HITL gate (`hitl_gate`) is a workflow node: it yields a `RequestInput`,
 pauses the run, and resumes from `ctx.resume_inputs` — the engine then follows
-the edge to `output_agent`, which formats the GMResponse.
+the edge to `response`
 
 State contract (unchanged):
 - state.last_agent / tools_fired: observability traces
@@ -55,10 +55,9 @@ from google.adk.workflow import Workflow, node
 from google.genai import types
 
 from app.agents.action_agent import action_agent
-from app.agents.callbacks import _build_party_state, evaluate_input_safety
+from app.agents.callbacks import _build_party_state, evaluate_input_safety, persist_campaign_from_context, _parse_json
 from app.agents.campaign_agent import campaign_agent
 from app.agents.npc_dialogue_agent import npc_dialogue_agent
-from app.agents.output_agent import output_agent
 from app.agents.setup_agent import setup_agent
 from app.agents.supervisor_agent import classifier
 from app.tools.campaign import (
@@ -150,6 +149,11 @@ def _extract_player_action(node_input: Any) -> str:
 def prepare(ctx: Context, node_input: Any) -> Event:
     """Entry node: reset per-turn state, capture the player's message, and run
     the input guardrail. Routes "safe" or "blocked"."""
+    
+    # Clear any stale resume_inputs sent by the UI for a new turn.
+    if getattr(ctx, "resume_inputs", None):
+        ctx.resume_inputs.clear()
+        
     text = _extract_player_action(node_input)
     is_safe, reason, refusal = evaluate_input_safety(text)
     turn = ctx.state.get("turn_count", 0) + 1
@@ -193,6 +197,7 @@ def prepare(ctx: Context, node_input: Any) -> Event:
             "npc_result": "",
             "campaign_result": "",
             "setup_result": "",
+            "hitl_prompted": False,
         },
     )
 
@@ -249,6 +254,8 @@ def setup_finalize(ctx: Context, node_input: Any) -> Event:
             m["hp"] = m["max_hp"]
     party = _build_party_state(members, PartyState, CharacterState)
 
+    party_breakdown = result.get("party_breakdown")
+
     invocation_id = getattr(ctx, "invocation_id", None)
     metadata = CampaignMetadata(
         chapter=result.get("chapter") or 'chapter',
@@ -268,8 +275,8 @@ def setup_finalize(ctx: Context, node_input: Any) -> Event:
         narrative=result.get("narrative") or 'The campaign begins not in a grand dungeon...',
         summary=result.get("scene_summary") or 'Yet to uncover',
         scene=result.get("scene_summary") or 'Yet to uncover',
-        initiative=result.get("initiative") or ['Initiated'],
         metadata=metadata,
+        party_breakdown=party_breakdown,
         intent="SETUP",
     )
 
@@ -301,6 +308,26 @@ def route_intent(ctx: Context, node_input: Any) -> Event:
         route=intent,
         state={"intent": intent},
     )
+
+
+def result(ctx: Context, node_input: Any) -> Event:
+    """Format specialist result into gm_response."""
+    intent = ctx.state.get("intent", "")
+    draft_str = ctx.state.get(_RESULT_KEY.get(intent, ""), "")
+    
+    draft = _parse_json(draft_str)
+        
+    response = {
+        "intent": intent,
+        "last_agent": ctx.state.get("last_agent", []),
+        "tools_fired": ctx.state.get("tools_fired", []),
+    }
+    
+    if isinstance(draft, dict):
+        response.update(draft)
+        
+    ctx.state["gm_response"] = json.dumps(response)
+    return Event(output=ctx.state["gm_response"])
 
 
 @node(name="hitl_gate", rerun_on_resume=True)
@@ -337,11 +364,20 @@ async def hitl_gate(ctx: Context, node_input: Any):
         )
         return
 
-    answer = ctx.resume_inputs[interrupt_id]
+    answer = ctx.resume_inputs.pop(interrupt_id, {})
     if isinstance(answer, dict):
         answer = answer.get("response") or answer.get("result") or ""
     rejected = str(answer).strip().lower() not in _APPROVE_WORDS
-    yield Event(output=draft, state={"player_rejected": rejected})
+    
+    if not rejected:
+        await persist_campaign_from_context(ctx)
+
+    gm_response = ctx.state.get("gm_response", "")
+    yield Event(
+        content=types.Content(role="model", parts=[types.Part.from_text(text=gm_response)]),
+        output=gm_response,
+        state={"player_rejected": rejected}
+    )
 
 
 # ===========================================================================
@@ -360,10 +396,10 @@ root_agent = Workflow(
             "NPC_DIALOGUE": npc_dialogue_agent,
             "CAMPAIGN": campaign_agent,
         }),
-        (action_agent, hitl_gate),
-        (npc_dialogue_agent, hitl_gate),
-        (campaign_agent, hitl_gate),
-        (hitl_gate, output_agent),
+        (action_agent, result),
+        (npc_dialogue_agent, result),
+        (campaign_agent, result),
+        (result, hitl_gate),
     ],
     description="D&D Game Master graph: guardrail, intent routing, specialist "
                 "agents, HITL approval, and structured output.",

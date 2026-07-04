@@ -147,7 +147,7 @@ def validate_draft(raw: object, schema) -> tuple[Optional[str], str]:
 
 
 def _build_party_state(party_list: list, PartyState, CharacterState):
-    """Convert GMResponse.party (list of {name, hp, max_hp, conditions}) into a
+    """Convert party (list of {name, hp, max_hp, conditions}) into a
     PartyState, or None if absent/malformed.
 
     Returning None (rather than an empty PartyState) lets the persistence layer
@@ -164,6 +164,7 @@ def _build_party_state(party_list: list, PartyState, CharacterState):
                 class_=entry.get("class", ""),
                 hp=entry["hp"],
                 max_hp=entry["max_hp"],
+                skills=entry.get("skills", []),
                 conditions=entry.get("conditions", []),
                 armors=entry.get("armors", []),
                 spells=entry.get("spells", []),
@@ -178,7 +179,7 @@ def _build_party_state(party_list: list, PartyState, CharacterState):
 
 
 def _build_dialogue(dialogue_list: list, DialogueLine):
-    """Convert GMResponse.dialogue (list of {speaker, text, emotion}) into a list of
+    """Convert dialogue (list of {speaker, text, emotion}) into a list of
     DialogueLine, or None if absent/malformed.
 
     Returning None (rather than an empty list) lets the persistence layer carry the
@@ -204,13 +205,11 @@ def _build_dialogue(dialogue_list: list, DialogueLine):
     return lines or None
 
 
-async def persist_campaign_callback(callback_context: CallbackContext) -> None:
-    """After-agent callback for output_agent: deterministically persist state.
-
-    Persistence must not depend on a weak model choosing to call a tool. The
-    output_agent's only job is to format `gm_response`; this callback parses
-    that result and writes the latest campaign state itself, so an update is
-    guaranteed every turn (and shows up in state.tools_fired for observability).
+async def persist_campaign_from_context(ctx) -> None:
+    """Helper function to deterministically persist state from a Context object.
+    
+    This function parses the formatted `gm_response` and writes the latest 
+    campaign state itself, so an update is guaranteed every turn.
     """
     # Imported lazily to avoid a heavy import (pymongo) at module load and any
     # import-order coupling between the agents and tools packages.
@@ -222,19 +221,19 @@ async def persist_campaign_callback(callback_context: CallbackContext) -> None:
         DialogueLine,
     )
 
-    if callback_context.state.get("player_rejected"):
+    if ctx.state.get("player_rejected"):
         return
 
-    raw = callback_context.state.get("gm_response", "")
+    raw = ctx.state.get("gm_response", "")
     resp = _parse_gm_response(raw)
     if not resp and raw:
         logger.warning(
-            "persist_campaign_callback: could not parse gm_response as JSON; "
+            "persist_campaign_from_context: could not parse gm_response as JSON; "
             "persisting timestamp only. head=%r",
             str(raw)[:80],
         )
 
-    campaign_id = callback_context.state.get("campaign_id") or "default-campaign"
+    campaign_id = ctx.state.get("campaign_id") or "default-campaign"
     summary = resp.get("scene_summary") or None
     description = resp.get("narrative") or None
     progress = resp.get("progress")  # may be None == "unchanged"
@@ -250,7 +249,8 @@ async def persist_campaign_callback(callback_context: CallbackContext) -> None:
     combat_log = resp.get("combat_log") or []
     math_breakdown = resp.get("math_breakdown") or None
     requires_roll = bool(resp.get("requires_roll"))
-    invocation_id = getattr(callback_context, "invocation_id", None)
+    invocation_id = getattr(ctx, "invocation_id", None)
+    party_breakdown = resp.get("party_breakdown")
     
     metadata = CampaignMetadata(
         chapter=chapter,
@@ -267,10 +267,6 @@ async def persist_campaign_callback(callback_context: CallbackContext) -> None:
           or suggested_actions or combat_log or math_breakdown or requires_roll
           or invocation_id) else None
 
-    # initiative: empty list means "unchanged" -> pass None so the tool carries
-    # the previous order forward instead of clobbering it.
-    initiative = resp.get("initiative") or None
-
     # party: list[{name, hp, max_hp, conditions}] -> PartyState keyed by name.
     party = _build_party_state(resp.get("party") or [], PartyState, CharacterState)
 
@@ -280,7 +276,7 @@ async def persist_campaign_callback(callback_context: CallbackContext) -> None:
     dialogue = _build_dialogue(resp.get("dialogue") or [], DialogueLine)
 
     # intent: prefer the workflow's resolved state value, fall back to the response.
-    intent = callback_context.state.get("intent") or resp.get("intent") or None
+    intent = ctx.state.get("intent") or resp.get("intent") or None
 
     try:
         update_campaign(
@@ -290,17 +286,17 @@ async def persist_campaign_callback(callback_context: CallbackContext) -> None:
             description=description,
             progress=progress,
             metadata=metadata,
-            initiative=initiative,
             party=party,
             npc_name=npc_name,
             narrative=narrative,
             dialogue=dialogue,
             intent=intent,
+            party_breakdown=party_breakdown,
         )
     except Exception:  # pragma: no cover - persistence must never break the turn
-        logger.exception("persist_campaign_callback: update_campaign failed")
+        logger.exception("persist_campaign_from_context: update_campaign failed")
         return
 
-    fired = callback_context.state.get("tools_fired", [])
+    fired = ctx.state.get("tools_fired", [])
     fired.append("update_campaign")
-    callback_context.state["tools_fired"] = fired
+    ctx.state["tools_fired"] = fired

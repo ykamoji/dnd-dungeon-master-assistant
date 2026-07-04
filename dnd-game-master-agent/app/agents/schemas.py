@@ -30,11 +30,19 @@ class CharacterUpdate(BaseModel):
     class_: str = Field(default="", alias="class", description="The character's D&D class (e.g., 'Wizard', 'Fighter', 'Cleric')")
     hp: int = Field(description="Current hit points")
     max_hp: int = Field(description="Maximum hit points")
+    skills: list[str] = Field(default_factory=list, description="Skills that the character is proficient in")
     conditions: list[str] = Field(default_factory=list, description="Active status conditions")
     armors: list[str] = Field(default_factory=list, description="Armor equipped/owned AFTER this turn; include only when known/changed, never invent")
     spells: list[str] = Field(default_factory=list, description="Spells prepared/known AFTER this turn; include only when known/changed, never invent")
     weapons: list[str] = Field(default_factory=list, description="Weapons carried AFTER this turn; include only when known/changed, never invent")
     magicitems: list[str] = Field(default_factory=list, description="Magic items possessed AFTER this turn; include only when known/changed, never invent")
+
+class PartyBreakDown(BaseModel):
+    level: int = Field(description="Total level of all members")
+    perception: int = Field(description="Highest passive perception in the party")
+    health: int = Field(description="Combined current health of all members")
+    money: int = Field(default=0, description="Total money in gold pieces shared by the party")
+    
 
 class Assets(BaseModel):
     """
@@ -59,7 +67,20 @@ class StoryResult(BaseModel):
     assets: list[Assets] = Field(default_factory=list, description="List of asset file and description for every matching chapter, map, scene, NPC")
 
 
-class SetupResult(BaseModel):
+class CommonResult(BaseModel):
+    """Common structured output fields shared by all specialist agents."""
+    narrative: str = Field(description="Vivid description of what happened when the action resolved")
+    scene_summary: str = Field(default="", description="Short, evocative summary/title of the current location and situation")
+    chapter: str = Field(default="", description="Current chapter name, taken from story_agent")
+    section: str = Field(default="", description="Current section/location name, taken from story_agent")
+    party: list[CharacterUpdate] = Field(default_factory=list, description="Per-character HP/conditions AFTER this action; include only characters whose state is known. NEVER invent hp/max_hp")
+    gm_notes: str = Field(default="", description="Private GM notes: key NPCs present, threats, opportunities")
+    assets: list[Assets] = Field(default_factory=list, description="List of asset file and description for every matching chapter, map, scene, NPC")
+    suggested_actions: list[str] = Field(default_factory=list, description="2-3 concrete next moves the player can choose from")
+    next_scene_suggestions: list[str] = Field(default_factory=list, description="2-3 suggested next scenes or story directions")
+
+
+class SetupResult(CommonResult):
     """Structured output of the setup_executor (first-turn campaign/party init).
 
     Produced once, before the game loop starts. The setup_executor parses the
@@ -70,83 +91,25 @@ class SetupResult(BaseModel):
     campaign_name: str = Field(default="", description="Campaign/adventure name from the player's message")
     ready: bool = Field(default=False, description="True ONLY when a campaign name AND every party member's name, role, and class are present")
     message: str = Field(default="", description="If not ready: exactly what the player must still provide. If ready: a short confirmation that the adventure can begin")
-    party: list[CharacterUpdate] = Field(default_factory=list, description="One entry per party member with class-derived hp = max_hp, weapons, and armors; empty when not ready")
-    narrative: str = Field(description="Player-facing description of the current scene and situation")
-    chapter: str = Field(default="", description="Current chapter name, taken from story_agent")
-    section: str = Field(default="", description="Current section/location name, taken from story_agent")
-    scene_summary: str = Field(default="", description="Short, evocative summary/title of the current location and situation")
-    gm_notes: str = Field(default="", description="Private GM notes: key NPCs present, threats, opportunities")
-    next_scene_suggestions: list[str] = Field(default_factory=list, description="2-3 suggested next scenes or story directions")
-    assets: list[Assets] = Field(default_factory=list, description="List of asset file and description for every matching chapter, map, scene, NPC")
     progress: float | None = Field(default=None, description="Campaign completion percent (0-100); set ONLY if the campaign measurably advanced this turn, else null")
-    initiative: list[str] = Field(default_factory=list, description="Combat turn order, only when in or entering combat; else empty")
-    suggested_actions: list[str] = Field(default_factory=list, description="2-3 concrete next moves for the player")
+    party_breakdown: PartyBreakDown | None = Field(default=None, description="Breakdown of the party's current state")
 
 
 
-class ActionResult(BaseModel):
+class ActionResult(CommonResult):
     """Structured output of the action_executor (combat & rules resolution)."""
-    narrative: str = Field(description="Vivid description of what happened when the action resolved")
     combat_log: list[CombatEntry] = Field(default_factory=list, description="One entry per attack/spell/check resolved this turn")
     math_breakdown: str = Field(default="", description="Explicit dice math: AC, attack rolls, modifiers, damage, saving throws")
-    party: list[CharacterUpdate] = Field(default_factory=list, description="Per-character HP/conditions AFTER this action; include only characters whose state is known. NEVER invent hp/max_hp")
     requires_roll: bool = Field(default=False, description="True if the next suggested action likely needs a dice roll")
-    suggested_actions: list[str] = Field(default_factory=list, description="2-3 concrete next moves the player can choose from")
-    assets: list[Assets] = Field(default_factory=list, description="List of asset file and description for every matching chapter, map, scene, NPC")
+    party_breakdown: PartyBreakDown | None = Field(default=None, description="Breakdown of the party's current state")
 
 
-class NpcResult(BaseModel):
+class NpcResult(CommonResult):
     """Structured output of the npc_executor (in-character NPC dialogue)."""
-    narrative: str = Field(description="Brief framing of the social scene around the dialogue")
     npc_name: str = Field(default="", description="Name of the NPC speaking")
     dialogue: list[DialogueLine] = Field(default_factory=list, description="Ordered in-character lines, each with speaker, text, and emotion")
-    suggested_actions: list[str] = Field(default_factory=list, description="2-3 follow-up actions the player can take")
-    assets: list[Assets] = Field(default_factory=list, description="List of asset file and description for every matching chapter, map, scene, NPC")
 
 
-class CampaignResult(BaseModel):
+class CampaignResult(CommonResult):
     """Structured output of the campaign_executor (scene/state management)."""
-    narrative: str = Field(description="Player-facing description of the current scene and situation")
-    chapter: str = Field(default="", description="Current chapter name, taken from story_agent")
-    section: str = Field(default="", description="Current section/location name, taken from story_agent")
-    scene_summary: str = Field(default="", description="Short, evocative summary/title of the current location and situation")
-    gm_notes: str = Field(default="", description="Private GM notes: key NPCs present, threats, opportunities")
-    next_scene_suggestions: list[str] = Field(default_factory=list, description="2-3 suggested next scenes or story directions")
-    assets: list[Assets] = Field(default_factory=list, description="List of asset file and description for every matching chapter, map, scene, NPC")
     progress: float | None = Field(default=None, description="Campaign completion percent (0-100); set ONLY if the campaign measurably advanced this turn, else null")
-    initiative: list[str] = Field(default_factory=list, description="Combat turn order, only when in or entering combat; else empty")
-    suggested_actions: list[str] = Field(default_factory=list, description="2-3 concrete next moves for the player")
-
-
-class GMResponse(BaseModel):
-    """Unified output schema for the UI renderer.
-
-    The UI reads `intent` to decide which fields to render.
-    All fields have defaults so only the relevant ones need to be populated.
-    """
-    intent: str = Field(description="ACTION | NPC_DIALOGUE | CAMPAIGN")
-    narrative: str = Field(description="Main narrative text for the player")
-    # ACTION fields
-    combat_log: list[CombatEntry] = Field(default_factory=list, description="Combat log entries")
-    math_breakdown: str = Field(default="", description="Detailed math for rolls/checks")
-    # NPC_DIALOGUE fields
-    npc_name: str = Field(default="", description="Name of the NPC in dialogue")
-    dialogue: list[DialogueLine] = Field(default_factory=list, description="Dialogue lines")
-    # CAMPAIGN fields
-    chapter: str = Field(default="", description="The current chapter of the adventure")
-    section: str = Field(default="", description="The current section or location name")
-    scene_summary: str = Field(default="", description="Summary of the current scene")
-    gm_notes: str = Field(default="", description="Private GM notes")
-    next_scene_suggestions: list[str] = Field(default_factory=list, description="Suggested next scenes")
-    assets: list[Assets] = Field(default_factory=list, description="Asset file and description for every matching chapter, map, scene, NPC")
-    # Persistable campaign state — fill ONLY when known. An empty list / null
-    # means "unchanged this turn"; the persistence layer carries the previous
-    # value forward rather than blanking it. Do not invent values you don't have.
-    progress: float | None = Field(default=None, description="Campaign completion percent (0-100), only if it advanced")
-    initiative: list[str] = Field(default_factory=list, description="Turn order of combatants, if in/entering combat")
-    party: list[CharacterUpdate] = Field(default_factory=list, description="Per-character mechanical state after this turn")
-    # Common
-    suggested_actions: list[str] = Field(default_factory=list, description="2-3 choices for the player")
-    requires_roll: bool = Field(default=False, description="Whether the next action needs a dice roll")
-    last_agent: list[str] = Field(default_factory=list, description="Observability: agents that ran")
-    tools_fired: list[str] = Field(default_factory=list, description="Observability: tools that fired")
