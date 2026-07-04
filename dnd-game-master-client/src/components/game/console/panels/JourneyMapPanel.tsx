@@ -5,7 +5,7 @@ import { Loader } from "@/components/ui/Loader";
 import { useConsole } from "../ConsoleProvider";
 import { JourneyTurnCard } from "../parts/JourneyTurnCard";
 import { TrailNode } from "../parts/TrailNode";
-import { scrollIntoContainer } from "../scroll";
+import { scrollIntoContainer, scrollToBottom } from "../scroll";
 
 interface JourneyMapPanelProps {
   /** "vertical" = serpentine rail; "hero" = a wider, board-like wrap. */
@@ -28,12 +28,24 @@ export function JourneyMapPanel({ orientation = "vertical" }: JourneyMapPanelPro
     useConsole();
   const activeRef = useRef<HTMLLIElement | null>(null);
   const scrollRef = useRef<HTMLElement | null>(null);
+  const didInitialScroll = useRef(false);
 
   useEffect(() => {
     // Scroll the trail's own container only — NOT via scrollIntoView, which would
     // also scroll the (overflow-hidden) game stack and cut the console off.
     scrollIntoContainer(scrollRef.current, activeRef.current);
   }, [activeIndex, viewPending, pending]);
+
+  useEffect(() => {
+    // On first render (once history is populated), jump to the latest turn —
+    // it's the bottom-most card. Deferred a frame so the list has laid out.
+    if (didInitialScroll.current || (history.length === 0 && !pending)) return;
+    const raf = requestAnimationFrame(() => {
+      scrollToBottom(scrollRef.current);
+      didInitialScroll.current = true;
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [history.length, pending]);
 
   if (historyLoading && history.length === 0 && !pending) {
     return (

@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { AssetGallery } from "./AssetGallery";
+import { DmMapPicker } from "./DmMapPicker";
 import { PartyStatGrid } from "./PartyStatGrid";
 import { intentMeta } from "../snapshot";
 import { useConsole } from "../ConsoleProvider";
@@ -199,6 +200,8 @@ export function SnapshotLayout({
           View Party Details
         </Button>
 
+        <DmMapPicker />
+
         <SuggestionChips
           title="Suggested Actions"
           items={suggestedActions}
@@ -249,10 +252,11 @@ export function SnapshotLayout({
           <section>
             <SectionLabel>Combat Log</SectionLabel>
             <CombatTable log={meta.combat_log} />
-            {meta.math_breakdown && (
-              <p className="mt-2 font-mono text-xs text-parchment-dim">{meta.math_breakdown}</p>
-            )}
           </section>
+        )}
+
+        {meta.math_breakdown && (
+          <p className="mt-2 font-mono text-xs text-parchment-dim">{meta.math_breakdown}</p>
         )}
 
         {meta.gm_notes && (

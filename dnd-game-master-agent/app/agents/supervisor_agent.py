@@ -13,7 +13,7 @@ classifier = Agent(
     nothing else.
 
     Rules for classification:
-    - ACTION: Use for physical mechanics. Examples: combat, movement, casting spells, physical skill checks (e.g., sneaking, lockpicking), using items, or attacking.
+    - ACTION: Use for physical mechanics. Examples: party level, money, health, combat, movement, casting spells, physical skill (e.g., sneaking, lockpicking), using items, or attacking.
     - NPC_DIALOGUE: Use for direct interaction with specific characters. Examples: speaking in first-person to an NPC, asking a specific NPC a question, inspecting an NPC's specific property or shop, or social skill checks (e.g., persuasion, intimidation).
     - CAMPAIGN: Use for high-level exploration, world-building, and meta-game questions. Examples: broad information gathering (e.g., asking around town for rumors), asking the GM about the world, requesting scene summaries, or checking party status.
     
