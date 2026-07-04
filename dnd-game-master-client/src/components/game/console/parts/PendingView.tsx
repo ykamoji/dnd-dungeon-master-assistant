@@ -30,7 +30,6 @@ export function parseDraftToSnapshot(draft: string): TurnSnapshot | null {
       description: data.description,
       narrative: data.narrative,
       dialogue: data.dialogue,
-      initiative: data.initiative,
       party: partyState,
       intent: data.intent || "CAMPAIGN",
       metadata: {
@@ -67,7 +66,7 @@ export function PendingView({
   onSync: () => void;
 }) {
   const { setComposerDraft, approve, reject } = useConsole();
-  const parsedDraft = awaiting && draft ? parseDraftToSnapshot(draft) : null;
+  const parsedDraft = draft ? parseDraftToSnapshot(draft) : null;
   const [tab, setTab] = useState<"draft" | "timeline">("timeline");
 
   useEffect(() => {

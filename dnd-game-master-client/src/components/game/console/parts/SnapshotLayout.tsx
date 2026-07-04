@@ -105,10 +105,10 @@ function SuggestionChips({
           <button
             key={i}
             type="button"
-            onClick={() => onPick(s)}
+            onClick={() => onPick(s.replaceAll("'", ""))}
             className="rounded-full cursor-pointer border border-gold/30 bg-obsidian-2 px-3 py-1 text-left text-sm text-parchment transition-colors hover:border-gold hover:text-gold-bright"
           >
-            {s}
+            {s.replaceAll("'", "")}
           </button>
         ))}
       </div>
@@ -130,7 +130,7 @@ export function SnapshotLayout({
   setComposerDraft: (text: string) => void;
 }) {
   const [partyModalOpen, setPartyModalOpen] = useState(false);
-  const { campaignId } = useConsole();
+  const { campaignId, composerDraft } = useConsole();
   const s = snapshot;
   const meta = s.metadata ?? {};
   // Cache voices per session + turn (see useTextToSpeech).
@@ -145,6 +145,15 @@ export function SnapshotLayout({
       "Tell me about the world",
       "Lets begin exploring",
     ];
+  }
+
+  const setFinalCommand = (val: string) => {
+
+    if (composerDraft.trim().length == 0) {
+      setComposerDraft(`${val.trim()}.`)
+      return;
+    }
+    setComposerDraft(composerDraft.trim().includes(val.trim()) ? composerDraft.trim() : `${composerDraft.trim()} ${val.trim()}.`)
   }
 
   return (
@@ -193,12 +202,12 @@ export function SnapshotLayout({
         <SuggestionChips
           title="Suggested Actions"
           items={suggestedActions}
-          onPick={setComposerDraft}
+          onPick={(val) => setFinalCommand(val)}
         />
         <SuggestionChips
           title="Where to next?"
           items={meta.next_scene_suggestions ?? []}
-          onPick={setComposerDraft}
+          onPick={(val) => setFinalCommand(val)}
         />
       </div>
 
@@ -246,13 +255,6 @@ export function SnapshotLayout({
           </section>
         )}
 
-        {s.initiative && Array.isArray(s.initiative) && s.initiative.length > 0 && (
-          <section>
-            <SectionLabel>Initiative</SectionLabel>
-            <p className="font-body text-parchment">{s.initiative.join(" → ")}</p>
-          </section>
-        )}
-
         {meta.gm_notes && (
           <section className="parchment rounded-card border border-gold/30 p-4">
             <SectionLabel>GM Notes</SectionLabel>
@@ -269,7 +271,7 @@ export function SnapshotLayout({
         title="Party Status"
         size="lg"
       >
-        <PartyStatGrid party={s.party} />
+        <PartyStatGrid party={s.party} partyBreakdown={s.party_breakdown} />
       </Modal>
     </div>
   );

@@ -9,7 +9,8 @@ const agentMap = new Map<string, string>([
   ["campaign_executor", "Campaign"],
   ["CAMPAIGN", "LORE"],
   ["NPC_DIALOGUE", "DIALOGUE"],
-  ["ACTION", "ACTION"]
+  ["ACTION", "ACTION"],
+  ["setup_agent", "SETUP_COMPLETE"]
 ]);
 
 export function isApprovalEvent(ev: SessionEvent): boolean {
@@ -69,13 +70,15 @@ export function eventStep(ev: SessionEvent): { icon: string; title: string } {
   if (ev.author === "user") return { icon: "🎲", title: "Your move" };
   if (isApprovalEvent(ev)) return { icon: "✓", title: "Awaiting approval" };
 
+  // console.log(ev)
+
   // Tool calls are the most informative — classify by the tool name.
   const tool = eventToolName(ev);
   if (tool) {
     const n = tool.toLowerCase();
 
-    if (tool.includes("Invoked")) {
-      if (n.includes("lookup") || n.includes("resource") || n.includes("character"))
+    if (n.includes("invoked")) {
+      if (n.includes("lookup") || n.includes("resource") || n.includes("character") || n.includes("set_"))
         return { icon: "📜", title: "Consulting Lore" };
 
       if (n.includes("asset")) return { icon: "🖼️", title: "Finding art" };
@@ -87,13 +90,13 @@ export function eventStep(ev: SessionEvent): { icon: string; title: string } {
         return { icon: "📖", title: "Reading Story" };
     }
 
-    if (tool.includes("Responsed")) {
+    if (n.includes("responsed")) {
 
       if (n.includes("update")) {
         return { icon: "💾", title: "Saving" };
       }
 
-      if (n.includes("fetch") || n.includes("file") || n.includes("story"))
+      if (n.includes("fetch") || n.includes("file") || n.includes("story") || n.includes("set_"))
         return { icon: "📖", title: "Read Lore" };
 
       if (n.includes("get_state") || n.includes("lookup"))
@@ -140,7 +143,12 @@ export function eventStep(ev: SessionEvent): { icon: string; title: string } {
       return { icon: "💭", title: intent };
   }
 
-  if (a.includes("setup")) return { icon: "✨", title: "Setting the stage" };
+  if (a.includes("setup_agent"))
+    return { icon: "✓", title: "Setup Completed" };
+
+  if (a.includes("setup_executor")) return { icon: "✨", title: "Setting the stage" };
+  if (a.includes("setup_checker")) return { icon: "🔍", title: "Evaluating setup" };
+
   if (a.includes("campaign")) return { icon: "🗺️", title: "Advancing story" };
   if (a.includes("refuse") || a.includes("block")) return { icon: "🛑", title: "Declined" };
   if (a.includes("output")) return { icon: "📝", title: "Composing outcome" };

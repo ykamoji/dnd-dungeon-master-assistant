@@ -1,9 +1,10 @@
 "use client";
 
-import type { CharacterState, PartyState } from "@/lib/types";
+import type { CharacterState, PartyState, PartyBreakDown } from "@/lib/types";
 
 interface PartyStatGridProps {
   party?: PartyState | null;
+  partyBreakdown?: PartyBreakDown | null;
 }
 
 function hpTone(ratio: number): string {
@@ -65,16 +66,40 @@ function CharacterCard({ name, c }: { name: string; c: CharacterState }) {
 }
 
 /** The party's mechanical state — HP, conditions, and gear — at a turn. */
-export function PartyStatGrid({ party }: PartyStatGridProps) {
+export function PartyStatGrid({ party, partyBreakdown }: PartyStatGridProps) {
   const entries = Object.entries(party?.characters ?? {});
-  if (entries.length === 0) {
-    return <p className="font-rune text-md text-parchment-dim/70">No party state recorded yet.</p>;
-  }
+  
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-      {entries.map(([name, c]) => (
-        <CharacterCard key={name} name={name} c={c} />
-      ))}
+    <div className="space-y-4">
+      {partyBreakdown && (
+        <div className="rounded-card border border-gold/30 bg-obsidian p-4 flex gap-6">
+          <div className="flex flex-col">
+            <span className="text-xs text-parchment-dim uppercase tracking-wider font-rune">Level</span>
+            <span className="text-xl font-display text-gold">{partyBreakdown.level}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs text-parchment-dim uppercase tracking-wider font-rune">Perception</span>
+            <span className="text-xl font-display text-gold">{partyBreakdown.perception}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs text-parchment-dim uppercase tracking-wider font-rune">Health</span>
+            <span className="text-xl font-display text-gold">{partyBreakdown.health}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs text-parchment-dim uppercase tracking-wider font-rune">Money</span>
+            <span className="text-xl font-display text-gold">{partyBreakdown.money ?? 0} gp</span>
+          </div>
+        </div>
+      )}
+      {entries.length === 0 ? (
+        <p className="font-rune text-md text-parchment-dim/70">No party state recorded yet.</p>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {entries.map(([name, c]) => (
+            <CharacterCard key={name} name={name} c={c} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

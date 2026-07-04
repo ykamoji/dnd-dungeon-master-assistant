@@ -96,7 +96,7 @@ function reducer(state: ConsoleState, action: Action): ConsoleState {
         error: null,
       };
     case "RESUME_RUN":
-      return { ...state, runStatus: "running", viewPending: true, pendingDraft: null };
+      return { ...state, runStatus: "running", viewPending: true };
     case "APPEND_EVENT":
       if (state.events.some((e) => e.id === action.event.id)) return state;
       return { ...state, events: [...state.events, action.event] };
@@ -309,6 +309,7 @@ export function ConsoleProvider({
   useEffect(() => {
     if (state.events.length === 0) return;
     const lastEvent = state.events[state.events.length - 1];
+    const secondLastEvent = state.events[state.events.length - 2];
     if (isApprovalEvent(lastEvent)) {
       if (statusRef.current !== "awaiting_approval") {
         statusRef.current = "awaiting_approval";
@@ -316,7 +317,7 @@ export function ConsoleProvider({
         closeStream(); // run is paused at the gate — stop streaming
       }
     } else if ((lastEvent.author === "output_agent" && lastEvent.actions?.state_delta) ||
-      (lastEvent.author === "setup_agent" && (lastEvent.actions?.end_of_agent))) {
+      (secondLastEvent && secondLastEvent.author === "setup_agent" && (secondLastEvent.actions?.end_of_agent))) {
       if (statusRef.current !== "idle") {
         // We know the turn is finished. Call reloadHistory to update the UI.
         reloadHistory();
@@ -422,7 +423,7 @@ export function ConsoleProvider({
     async (sid: string) => {
       const partyPayload = game.party
         .filter((p) => p.name.trim())
-        .map((p) => ({ role: p.role, class: p.className, name: p.name }));
+        .map((p) => ({ role: p.role, class: p.className, name: p.name, skills: p.skills || [] }));
       const startLen = historyRef.current.length;
 
       statusRef.current = "running";
