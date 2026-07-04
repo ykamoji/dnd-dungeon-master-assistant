@@ -55,6 +55,16 @@ integration:
 	set -a && . ./app/.env && set +a && set -o pipefail && \
 		uv run --extra local pytest tests/integration/test_agent.py 2>&1 | tee $(LOG_DIR)/make-integration.log
 
+gaurdrail-test:
+	@mkdir -p $(LOG_DIR)
+	set -a && . ./app/.env && set +a && set -o pipefail && \
+		uv run --extra local pytest tests/unit/test_guardrails.py 2>&1 | tee $(LOG_DIR)/make-gaurdrails.log
+
+eval-supervisor:
+	@mkdir -p $(LOG_DIR)
+	set -a && . ./app/.env && set +a && set -o pipefail && \
+		uv run --extra local pytest tests/eval/eval_supervisor.py 2>&1 | tee $(LOG_DIR)/make-eval-supervisor.log
+
 story-test:
 	uv run python scripts/test_story_agent.py
 
