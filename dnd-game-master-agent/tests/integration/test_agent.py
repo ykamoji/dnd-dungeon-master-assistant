@@ -50,7 +50,6 @@ def _seeded_toa_campaign(campaign_id: str) -> dict:
             "description": "A goblin cutpurse bolts through the crowded market as the "
                            "merchant prince Wakanga waves you over from his stall.",
             "metadata": {"chapter": "Ch 1 Port Nyanzaru", "section": "Market", "assets": []},
-            "initiative": ["Hero", "Goblin"],
             "party": {"characters": {"Hero": {"hp": 12, "max_hp": 12, "conditions": []}}},
         }],
     }
@@ -168,7 +167,6 @@ async def test_campaign_flow_end_to_end() -> None:
             "description": "Your ship docks at the bustling harbor of Port Nyanzaru "
                            "under a blazing sun.",
             "metadata": {"chapter": "Ch 1 Port Nyanzaru", "section": "Arrival", "assets": []},
-            "initiative": [],
             "party": {"characters": {"Hero": {"hp": 10, "max_hp": 10, "conditions": []}}},
         }],
     }

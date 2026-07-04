@@ -76,7 +76,6 @@ async def run_tests():
                 scene="Smoke Test Scene 2",
                 description="Testing the API.",
                 metadata={"chapter": "test", "assets": []},
-                initiative=["Tester"],
                 party={"characters": {"Tester": {"hp": 10, "max_hp": 10, "conditions": []}}},
             )
             print(f"Update campaign state: appended turn")
