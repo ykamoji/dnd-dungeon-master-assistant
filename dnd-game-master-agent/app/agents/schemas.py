@@ -73,7 +73,6 @@ class CommonResult(BaseModel):
     scene_summary: str = Field(default="", description="Short, evocative summary/title of the current location and situation")
     chapter: str = Field(default="", description="Current chapter name, taken from story_agent")
     section: str = Field(default="", description="Current section/location name, taken from story_agent")
-    party: list[CharacterUpdate] = Field(default_factory=list, description="Per-character HP/conditions AFTER this action; include only characters whose state is known. NEVER invent hp/max_hp")
     gm_notes: str = Field(default="", description="Private GM notes: key NPCs present, threats, opportunities")
     assets: list[Assets] = Field(default_factory=list, description="List of asset file and description for every matching chapter, map, scene, NPC")
     suggested_actions: list[str] = Field(default_factory=list, description="2-3 concrete next moves the player can choose from")
@@ -92,6 +91,7 @@ class SetupResult(CommonResult):
     ready: bool = Field(default=False, description="True ONLY when a campaign name AND every party member's name, role, and class are present")
     message: str = Field(default="", description="If not ready: exactly what the player must still provide. If ready: a short confirmation that the adventure can begin")
     progress: float | None = Field(default=None, description="Campaign completion percent (0-100); set ONLY if the campaign measurably advanced this turn, else null")
+    party: list[CharacterUpdate] = Field(default_factory=list, description="Per-character HP/conditions AFTER this action; include only characters whose state is known. NEVER invent hp/max_hp")
     party_breakdown: PartyBreakDown | None = Field(default=None, description="Breakdown of the party's current state")
 
 
@@ -101,6 +101,7 @@ class ActionResult(CommonResult):
     combat_log: list[CombatEntry] = Field(default_factory=list, description="One entry per attack/spell/check resolved this turn")
     math_breakdown: str = Field(default="", description="Explicit dice math: AC, attack rolls, modifiers, damage, saving throws")
     requires_roll: bool = Field(default=False, description="True if the next suggested action likely needs a dice roll")
+    party: list[CharacterUpdate] = Field(default_factory=list, description="Per-character HP/conditions AFTER this action; include only characters whose state is known. NEVER invent hp/max_hp")
     party_breakdown: PartyBreakDown | None = Field(default=None, description="Breakdown of the party's current state")
 
 

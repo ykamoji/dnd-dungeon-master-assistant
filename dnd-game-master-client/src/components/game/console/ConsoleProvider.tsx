@@ -311,12 +311,13 @@ export function ConsoleProvider({
     const lastEvent = state.events[state.events.length - 1];
     const secondLastEvent = state.events[state.events.length - 2];
     if (isApprovalEvent(lastEvent)) {
+      console.log('pending outside p1 , ', state.events)
       if (statusRef.current !== "awaiting_approval") {
         statusRef.current = "awaiting_approval";
         dispatch({ type: "AWAIT_APPROVAL", draft: extractDraft(state.events) });
         closeStream(); // run is paused at the gate — stop streaming
       }
-    } else if ((lastEvent.author === "output_agent" && lastEvent.actions?.state_delta) ||
+    } else if ((lastEvent.author === "dnd_game_master_agent" && lastEvent.content?.parts && lastEvent.content?.parts.length > 0) ||
       (secondLastEvent && secondLastEvent.author === "setup_agent" && (secondLastEvent.actions?.end_of_agent))) {
       if (statusRef.current !== "idle") {
         // We know the turn is finished. Call reloadHistory to update the UI.
@@ -324,6 +325,12 @@ export function ConsoleProvider({
         statusRef.current = "idle";
         dispatch({ type: "RUN_DONE" });
         closeStream(); // run is paused at the gate — stop streaming
+      }
+    }
+    else {
+      if (statusRef.current !== "running") {
+        statusRef.current = "running";
+        dispatch({ type: "RESUME_RUN" });
       }
     }
   }, [state.events, closeStream, reloadHistory]);
@@ -346,7 +353,13 @@ export function ConsoleProvider({
             resolve(); // the SSE already settled this (approval / error)
             return;
           }
+
+          // Poll history to detect when the turn is actually committed to DB.
+          // This is resilient to SSE drops or agent name changes.
+          reloadHistory();
+
           if (historyRef.current.length > startHistoryLen) {
+            console.log('why ?, ', historyRef.current.length, startHistoryLen)
             closeStream();
             statusRef.current = "idle";
             dispatch({ type: "RUN_DONE" });
@@ -531,6 +544,8 @@ export function ConsoleProvider({
     !state.viewPending && history.length
       ? history[Math.min(Math.max(state.activeIndex, 0), history.length - 1)]
       : null;
+
+  // console.log(!state.viewPending, history.length)
 
   const value: ConsoleContextValue = {
     campaignId,

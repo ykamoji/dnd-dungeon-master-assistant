@@ -252,6 +252,7 @@ def setup_finalize(ctx: Context, node_input: Any) -> Event:
     for m in members:
         if isinstance(m, dict) and m.get("max_hp") is not None:
             m["hp"] = m["max_hp"]
+            
     party = _build_party_state(members, PartyState, CharacterState)
 
     party_breakdown = result.get("party_breakdown")

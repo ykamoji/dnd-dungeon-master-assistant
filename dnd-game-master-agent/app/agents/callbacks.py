@@ -267,9 +267,6 @@ async def persist_campaign_from_context(ctx) -> None:
           or suggested_actions or combat_log or math_breakdown or requires_roll
           or invocation_id) else None
 
-    # party: list[{name, hp, max_hp, conditions}] -> PartyState keyed by name.
-    party = _build_party_state(resp.get("party") or [], PartyState, CharacterState)
-
     # NPC_DIALOGUE fields: persist the speaker, the turn narrative, and the lines.
     npc_name = resp.get("npc_name") or None
     narrative = resp.get("narrative") or None
@@ -277,6 +274,11 @@ async def persist_campaign_from_context(ctx) -> None:
 
     # intent: prefer the workflow's resolved state value, fall back to the response.
     intent = ctx.state.get("intent") or resp.get("intent") or None
+
+    party = None
+    if intent == 'ACTION':
+        # party: list[{name, hp, max_hp, conditions}] -> PartyState keyed by name.
+        party = _build_party_state(resp.get("party") or [], PartyState, CharacterState)
 
     try:
         update_campaign(

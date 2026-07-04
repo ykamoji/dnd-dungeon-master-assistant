@@ -269,7 +269,7 @@ export function SnapshotLayout({
         open={partyModalOpen}
         onClose={() => setPartyModalOpen(false)}
         title="Party Status"
-        size="lg"
+        size="extra"
       >
         <PartyStatGrid party={s.party} partyBreakdown={s.party_breakdown} />
       </Modal>

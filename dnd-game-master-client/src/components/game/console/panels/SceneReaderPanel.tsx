@@ -38,6 +38,7 @@ export function SceneReaderPanel() {
 
   // Fetch historical events when switching to timeline
   useEffect(() => {
+    // console.log(readerTab, activeSnapshot?.metadata?.invocation_id, campaignId)
     if (readerTab === "timeline" && activeSnapshot?.metadata?.invocation_id && campaignId) {
       setLoadingHistory(true);
       getHistoricalEvents(campaignId, activeSnapshot.metadata.invocation_id)

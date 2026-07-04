@@ -90,6 +90,8 @@ export interface CharacterState {
   spells: string[];
   weapons: string[];
   magicitems: string[];
+  /** Proficient skills — optional; rendered when the backend supplies them. */
+  skills?: string[];
 }
 
 /** The party's mechanical state, keyed by character name. */
