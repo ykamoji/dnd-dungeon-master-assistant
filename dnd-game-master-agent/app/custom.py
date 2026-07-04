@@ -40,7 +40,6 @@ class UpdateCampaignRequest(BaseModel):
     scene: Optional[str] = None
     description: Optional[str] = None
     metadata: Optional[dict] = None
-    initiative: Optional[List[str]] = None
     party: Optional[dict] = None
 
 @router.get("/health/db")
@@ -82,7 +81,6 @@ def api_update_campaign(campaign_id: str, req: UpdateCampaignRequest):
         scene=req.scene,
         description=req.description,
         metadata=req.metadata,
-        initiative=req.initiative,
         party=req.party
     )
 

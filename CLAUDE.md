@@ -74,7 +74,6 @@ dnd-game-master-agent/
 │   │   ├── npc_dialogue_agent.py NPC dialogue
 │   │   ├── campaign_agent.py     scene/state management
 │   │   ├── setup_agent.py        first-turn campaign/party creation
-│   │   ├── output_agent.py       formats final GMResponse
 │   │   ├── story_agent.py        retrieves adventure content
 │   │   ├── evaluator_judge.py    semantic eval of drafts
 │   │   ├── callbacks.py          evaluate_input_safety, _build_party_state, etc.

@@ -82,12 +82,17 @@ def parse_event_row(row: sqlite3.Row) -> Optional[SessionEvent]:
     if author in ("user", "campaign_agent", "npc_dialogue_agent", "action_agent"):
         return None
 
+    if author in ("setup_agent"):
+        end_of_agent = ev_data.get("actions") and ev_data.get("actions").get("end_of_agent")
+        if not end_of_agent:
+            return None
+
     # if author in ("dnd_game_master_agent",):
     #     delta = ev_data.get("actions", {}).get("state_delta", {})
     #     if not delta or delta.get("intent") or "update_campaign" in delta.get("tools_fired", []):
     #         return None
         
-    if author in ("intent_classifier", "campaign_executor", "action_executor", "npc_executor", "llm_evaluator"):
+    if author in ("intent_classifier", "campaign_executor", "action_executor", "npc_executor", "llm_evaluator", "setup_executor"):
         parts = ev_data.get("content", {}).get("parts")
         if not parts:
             return None

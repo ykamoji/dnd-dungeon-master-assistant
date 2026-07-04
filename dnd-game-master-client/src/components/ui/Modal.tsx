@@ -10,7 +10,7 @@ interface ModalProps {
   title: string;
   children: ReactNode;
   onClose: () => void;
-  size?: "xs" | "md" | "lg";
+  size?: "xs" | "md" | "lg" | "extra";
   footer?: ReactNode;
 }
 
@@ -18,6 +18,7 @@ const SIZE: Record<NonNullable<ModalProps["size"]>, string> = {
   xs: "max-w-4xl",
   md: "max-w-7md",
   lg: "max-w-7xl",
+  extra: "max-w-12xl",
 };
 
 /** Themed popup dialog (used for "coming soon" campaigns + DNA profile). */
@@ -45,7 +46,7 @@ export function Modal({ open, title, children, onClose, size = "md", footer }: M
           <motion.div
             role="dialog"
             aria-modal="true"
-            className={`parchment relative z-10 flex max-h-[90vh] w-full ${SIZE[size]} flex-col rounded-card border border-gold/30 p-6 shadow-2xl shadow-black/60`}
+            className={` ${size === 'extra' ? 'bg-[#020202]' : 'parchment'} relative z-10 flex max-h-[100vh] w-full ${SIZE[size]} flex-col rounded-card ${size === 'extra' ? '' : 'border border-gold/30 '} p-6 shadow-2xl shadow-black/60`}
             initial={{ scale: 0.9, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.9, y: 20 }}

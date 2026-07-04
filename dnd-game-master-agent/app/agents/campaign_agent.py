@@ -5,7 +5,7 @@ from google.adk.events import Event, EventActions
 from google.adk.tools import FunctionTool
 from google.genai import types
 
-from app.agents.config import USE_LOCAL_LLM, MODEL, THINKING_CONFIG
+from app.agents.config import USE_LOCAL_LLM, MODEL, LOW_THINKING_CONFIG
 from app.agents.callbacks import (
     make_track_agent_callback,
     track_tool_callback,
@@ -19,7 +19,7 @@ from app.agents.evaluator_judge import evaluate_draft_semantically
 campaign_executor = Agent(
     name="campaign_executor",
     model=MODEL,
-    generate_content_config=THINKING_CONFIG,
+    generate_content_config=LOW_THINKING_CONFIG,
     include_contents="none",
     instruction="""You are the Lorekeeper & Scene Director — the keeper of the Tomb-of-Annihilation world state who frames each scene for the table and points the players toward what comes next.
 
@@ -31,7 +31,7 @@ campaign_executor = Agent(
     Previous feedback (if retrying — fix exactly this): {eval_feedback}
 
     Procedure:
-    1. Call `get_state` (use the Campaign ID above) to load the saved scene, progress, party, and initiative.
+    1. Call `get_state` (use the Campaign ID above) to load the saved scene, progress, and party.
     2. Call story_agent to pull the relevant chapter/scene content and its asset URL. Ask ONLY about game lore using location / NPC / chapter / scene NAMES (e.g. "the arrival scene in Port Nyanzaru").
        NEVER pass the Campaign ID, session ID, or player state — story_agent only knows module content and cannot resolve IDs.
     3. Call `get_state` and `story_agent` simultaneously. Issue both tool calls in a single, parallel batch. Do not look them up one by one.
@@ -43,18 +43,20 @@ campaign_executor = Agent(
       "narrative": "player-facing description of the current scene",
       "chapter": "from story_agent",
       "section": "from story_agent",
-      "scene_summary": "short evocative title/summary",
+      "scene_summary": "short, evocative summary/title of the current location and situation",
       "gm_notes": "key NPCs present, threats, opportunities",
       "next_scene_suggestions": ["str"],
+      "suggested_actions": ["str"]
       "assets": [{URL: "from story_agent", description: "from story_agent"}, ...],
       "progress": 0.1,
-      "initiative": ["str"],
-      "suggested_actions": ["str"]
     }
 
     Set `progress` value based on the chapter progression and scene within the chapter (total 5 chapters). 
-    Set `progress`, `initiative`, and `party` ONLY when this turn actually changed them; otherwise leave them 0, null, and empty, respectively so saved state is preserved.
-    Never invent hp/max_hp. Be concise but vivid; include asset URLs when story_agent provides them.
+    Set `progress` ONLY when this turn actually progressed the campaign to a new scene; otherwise leave it 0 so saved state is preserved.
+    Always set `scene_summary` to a different evocative title/summary from the previous State. Continue to use the same title/summary ONLY when absolutely nothing has changed.
+    Be concise but vivid; include asset URLs when story_agent provides them.
+    - `next_scene_suggestions` and `suggested_actions` MUST be highly specific to the current lore, NPCs, and location. DO NOT use generic actions like "Explore the area". 
+    - Provide actionable, narrative-driven options based on the module content. DO NOT repeat suggestions that the player has already taken or that were repeatedly offered in previous turns.
 
     MANDATORY TOOL USE: You do NOT know the saved state or scene content until the tool ACTUALLY returns it. NEVER simulate, assume, pretend, or imagine a tool result — phrases like "(simulated)" or "assuming this returns…" are forbidden.
     Issue the real `get_state` and `story_agent` calls and wait for their responses before framing the scene. Take chapter/section/asset URLs from story_agent's real output; if it returns nothing, say so in `narrative` instead of inventing lore.

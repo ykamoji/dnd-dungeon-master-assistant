@@ -1,3 +1,4 @@
+from app.agents.config import SMART_MODEL
 from typing import AsyncGenerator
 from google.adk.agents import Agent, BaseAgent, LoopAgent
 from google.adk.agents.invocation_context import InvocationContext
@@ -5,7 +6,7 @@ from google.adk.events import Event, EventActions
 from google.adk.tools import FunctionTool
 from google.genai import types
 
-from app.agents.config import USE_LOCAL_LLM, MODEL, THINKING_CONFIG
+from app.agents.config import USE_LOCAL_LLM, LOW_THINKING_CONFIG
 from app.agents.callbacks import (
     make_track_agent_callback,
     track_tool_callback,
@@ -18,8 +19,8 @@ from app.agents.evaluator_judge import evaluate_draft_semantically
 
 npc_executor = Agent(
     name="npc_executor",
-    model=MODEL,
-    generate_content_config=THINKING_CONFIG,
+    model=SMART_MODEL,
+    generate_content_config=LOW_THINKING_CONFIG,
     include_contents="none",
     instruction="""You are the Character Actor — an improv performer who gives each Tomb-of-Annihilation NPC a distinct, believable voice. You speak AS the NPC and never break character.
 
@@ -47,7 +48,11 @@ npc_executor = Agent(
     Return a single JSON object matching this schema (no prose outside the JSON):
     {
       "narrative": "brief framing of the social scene",
+      "scene_summary": "short, evocative summary/title of the current location and situation",
+      "chapter": "from story_agent",
+      "section": "from story_agent",
       "npc_name": "str",
+      "gm_notes": "key NPCs present, threats, opportunities",
       "dialogue": [{"speaker": "str", "text": "str", "emotion": "str", "gender": "str"}, ...],
       "next_scene_suggestions": ["str"],
       "suggested_actions": ["str"],
@@ -56,8 +61,14 @@ npc_executor = Agent(
 
     Stay in character. Never break the fourth wall or mention rules/dice/IDs in the dialogue text.
 
+    Rules for Suggestions:
+    - `next_scene_suggestions` and `suggested_actions` MUST be highly specific to the current dialogue, lore, and NPC motivations. 
+    - DO NOT use generic actions like "Ask about rumors". Provide actionable, narrative-driven options. 
+    - DO NOT repeat suggestions that the player has already taken or that were suggested in previous turns.
+
     MANDATORY TOOL USE: You do NOT know the NPC's profile or their canonical lines until the tools ACTUALLY return them.
     NEVER simulate, assume, pretend, or imagine a tool result — phrases like "(simulated)" or "assuming this returns…" are forbidden, and you must not voice an NPC from your own imagination. 
+    Always set `scene_summary` to a different evocative title/summary from the previous State. Continue to use the same title/summary ONLY when absolutely nothing has changed.
     Issue the real `lookup_character` call, then the real `story_agent` call, and wait for each response before writing dialogue. 
     If `lookup_character` returns nothing for the NPC, say so in `narrative` instead of inventing a personality.
 

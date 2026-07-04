@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { AssetGallery } from "./AssetGallery";
+import { DmMapPicker } from "./DmMapPicker";
 import { PartyStatGrid } from "./PartyStatGrid";
 import { intentMeta } from "../snapshot";
 import { useConsole } from "../ConsoleProvider";
@@ -105,10 +106,10 @@ function SuggestionChips({
           <button
             key={i}
             type="button"
-            onClick={() => onPick(s)}
+            onClick={() => onPick(s.replaceAll("'", ""))}
             className="rounded-full cursor-pointer border border-gold/30 bg-obsidian-2 px-3 py-1 text-left text-sm text-parchment transition-colors hover:border-gold hover:text-gold-bright"
           >
-            {s}
+            {s.replaceAll("'", "")}
           </button>
         ))}
       </div>
@@ -130,7 +131,7 @@ export function SnapshotLayout({
   setComposerDraft: (text: string) => void;
 }) {
   const [partyModalOpen, setPartyModalOpen] = useState(false);
-  const { campaignId } = useConsole();
+  const { campaignId, composerDraft } = useConsole();
   const s = snapshot;
   const meta = s.metadata ?? {};
   // Cache voices per session + turn (see useTextToSpeech).
@@ -145,6 +146,15 @@ export function SnapshotLayout({
       "Tell me about the world",
       "Lets begin exploring",
     ];
+  }
+
+  const setFinalCommand = (val: string) => {
+
+    if (composerDraft.trim().length == 0) {
+      setComposerDraft(`${val.trim()}.`)
+      return;
+    }
+    setComposerDraft(composerDraft.trim().includes(val.trim()) ? composerDraft.trim() : `${composerDraft.trim()} ${val.trim()}.`)
   }
 
   return (
@@ -190,15 +200,17 @@ export function SnapshotLayout({
           View Party Details
         </Button>
 
+        <DmMapPicker />
+
         <SuggestionChips
           title="Suggested Actions"
           items={suggestedActions}
-          onPick={setComposerDraft}
+          onPick={(val) => setFinalCommand(val)}
         />
         <SuggestionChips
           title="Where to next?"
           items={meta.next_scene_suggestions ?? []}
-          onPick={setComposerDraft}
+          onPick={(val) => setFinalCommand(val)}
         />
       </div>
 
@@ -240,17 +252,11 @@ export function SnapshotLayout({
           <section>
             <SectionLabel>Combat Log</SectionLabel>
             <CombatTable log={meta.combat_log} />
-            {meta.math_breakdown && (
-              <p className="mt-2 font-mono text-xs text-parchment-dim">{meta.math_breakdown}</p>
-            )}
           </section>
         )}
 
-        {s.initiative && Array.isArray(s.initiative) && s.initiative.length > 0 && (
-          <section>
-            <SectionLabel>Initiative</SectionLabel>
-            <p className="font-body text-parchment">{s.initiative.join(" → ")}</p>
-          </section>
+        {meta.math_breakdown && (
+          <p className="mt-2 font-mono text-xs text-parchment-dim">{meta.math_breakdown}</p>
         )}
 
         {meta.gm_notes && (
@@ -267,9 +273,9 @@ export function SnapshotLayout({
         open={partyModalOpen}
         onClose={() => setPartyModalOpen(false)}
         title="Party Status"
-        size="lg"
+        size="extra"
       >
-        <PartyStatGrid party={s.party} />
+        <PartyStatGrid party={s.party} partyBreakdown={s.party_breakdown} />
       </Modal>
     </div>
   );
