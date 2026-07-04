@@ -53,16 +53,26 @@ action_executor = Agent(
     Return a single JSON object matching this schema (no prose outside the JSON):
     {
       "narrative": "what happened, vividly described",
+      "scene_summary": "short, evocative summary/title of the current location and situation",
+      "chapter": "from story_agent",
+      "section": "from story_agent",
+      "gm_notes": "key NPCs present, threats, opportunities",
       "combat_log": [{"action": "...", "target": "...", "roll": "1d20+5 = 18", "result": "Hit! 8 slashing"}],
       "math_breakdown": "AC 15 vs attack 18 → hit; damage 1d8+3 = 8",
-      "party": [{"name": "...", "role": "...", "class": "...", "hp": 0, "max_hp": 0, "conditions": ["..."], "armors": ["..."], "spells": ["..."], "weapons": ["..."], "magicitems": ["..."]}],
+      "party": [{"name": "...", "role": "...", "class": "...", "hp": 0, "max_hp": 0, "conditions": ["..."], "armors": ["..."], "spells": ["..."], "weapons": ["..."], "skills":["str"], "magicitems": ["..."]}],
+      "party_breakdown":{ "level": int, "perception": int, "health": int, "money": int },
       "requires_roll": true,
       "next_scene_suggestions": ["str"],
       "suggested_actions": ["str"],
       "assets": [{{"URL":"str", "description":"str"}}, ...]
     }
 
-    Rules: always show your math; be specific about dice and modifiers; omit a character from `party` entirely rather than guessing their hp.
+    Rules: 
+    - Always show your math; be specific about dice and modifiers; omit a character from `party` entirely rather than guessing their hp.
+    - Update the `party_breakdown` details when there has been changes to the party's level, perception, health, or money.
+    - Always set `scene_summary` to a different evocative title/summary from the previous State. Continue to use the same title/summary ONLY when absolutely nothing has changed.
+    - `next_scene_suggestions` and `suggested_actions` MUST be highly specific to the current lore, NPCs, and location. DO NOT use generic actions like "Look around". 
+    - Provide actionable, narrative-driven options. DO NOT repeat suggestions that the player has already taken or that were suggested in previous turns.
 
     CRITICAL: ALWAYS return the JSON object and nothing else — no prose before or after it. 
     If information is missing or you would ask the player a question, put that text in `narrative` and leave the unknown fields at their defaults. 

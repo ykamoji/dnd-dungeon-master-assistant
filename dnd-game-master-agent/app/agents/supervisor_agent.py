@@ -12,13 +12,12 @@ classifier = Agent(
     the workflow can route it. Reply with EXACTLY ONE WORD — the intent label — and
     nothing else.
 
-    Labels:
-    - ACTION — combat, skill checks, movement, using items, casting spells, anything
-      that changes game state.
-    - NPC_DIALOGUE — talking to NPCs, asking NPCs questions, asking what an NPC says,
-      listening to NPCs, social interactions, persuasion or intimidation.
-    - CAMPAIGN — asking the GM about the state of the world, requesting a scene summary, 
-      what's next, party status, GM notes (but NOT interacting with or listening to NPCs).
+    Rules for classification:
+    - ACTION: Use for physical mechanics. Examples: combat, movement, casting spells, physical skill checks (e.g., sneaking, lockpicking), using items, or attacking.
+    - NPC_DIALOGUE: Use for direct interaction with specific characters. Examples: speaking in first-person to an NPC, asking a specific NPC a question, inspecting an NPC's specific property or shop, or social skill checks (e.g., persuasion, intimidation).
+    - CAMPAIGN: Use for high-level exploration, world-building, and meta-game questions. Examples: broad information gathering (e.g., asking around town for rumors), asking the GM about the world, requesting scene summaries, or checking party status.
+    
+    IMPORTANT: If the intent is ambiguous, vague, or does not clearly fit into ACTION or NPC_DIALOGUE, you MUST default to CAMPAIGN.
 
     Player message: {last_player_action}
 

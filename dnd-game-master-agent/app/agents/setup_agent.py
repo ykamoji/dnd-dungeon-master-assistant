@@ -28,7 +28,7 @@ from google.adk.events import Event, EventActions
 from google.adk.tools import FunctionTool
 from google.genai import types
 
-from app.agents.config import USE_LOCAL_LLM, MODEL, THINKING_CONFIG
+from app.agents.config import USE_LOCAL_LLM, SMART_MODEL, LARGE_OUTPUT_CONFIG
 from app.agents.callbacks import (
     make_track_agent_callback,
     track_tool_callback,
@@ -40,8 +40,8 @@ from app.tools.open5e_lookup import lookup_character_resource
 
 setup_executor = Agent(
     name="setup_executor",
-    model=MODEL,
-    generate_content_config=THINKING_CONFIG,
+    model=SMART_MODEL,
+    generate_content_config=LARGE_OUTPUT_CONFIG,
     include_contents="none",
     instruction="""You are the Session Zero D&D Coordinator. 
     
@@ -67,8 +67,14 @@ setup_executor = Agent(
            (a reasonable starting loadout). Only list gear grounded in the tool data —
            never invent specific magic items.
          - Set "conditions": [].
+         - Set `party_breakdown` based on the combined levels, perception, health of the party members, and money. Initially it will all at full, and money at 50.
        Then set "ready": true and a short "message" confirming the party is ready.
-    4. Call the `story_agent` with the arg: "Build the first scene for the campaign where the players are teleported to chult.". 
+    4. Call the `story_agent` to build the first scene. You may call the tool multiple times to get below details:
+         - The backstory and the current setup of the world. (for the `story_agent` to understand the context of the adventure) 
+         - The starting of the adventure. (for the `story_agent` to understand the context of the adventure) 
+         - Introductions to the various cities, places and its denizans where the story starts. (for the `story_agent` to understand the context of the adventure) 
+         - How to run this adventure. (for the `story_agent` to understand the context of the adventure) 
+       Once collected the above details, build the first scene for the campaign in the `narrative`. `narrative` should be exhaustive and very detailed.
        The tool `story_agent` should be called in parallel with the `lookup_character_resource` tool call.
 
     MANDATORY TOOL USE: You do NOT know a class's HP or proficiencies until `lookup_character_resource` ACTUALLY returns them. 
@@ -80,10 +86,11 @@ setup_executor = Agent(
     Return a single JSON object matching this schema (no prose outside the JSON):
     {
       "campaign_name": "...",
-      "party": [{"name": "str", "role": "str", "class": "str", "hp": int, "max_hp": int, "conditions": ["str"], "armors": ["str"], "spells": ["str"], "weapons": ["str"], "magicitems": ["str"]}],
+      "party": [{"name": "str", "role": "str", "class": "str", "hp": int, "max_hp": int, "conditions": ["str"], "armors": ["str"], "spells": ["str"], "weapons": ["str"], "skills":["str"], "magicitems": ["str"]}],
+      "party_breakdown":{ "level": int, "perception": int, "health": int, "money": int },
       "ready": true,
       "message": "...",
-      "narrative": "player-facing description of the current scene",
+      "narrative": "The backstory and the current setup of the world, the starting of the adventure, Introductions to the various cities, places and its denizans where the story starts, how to run this adventure",
       "chapter": "from story_agent",
       "section": "from story_agent",
       "scene_summary": "short evocative title/summary",
@@ -91,7 +98,6 @@ setup_executor = Agent(
       "next_scene_suggestions": ["...", "...", "..."],
       "assets": [{URL: "from story_agent", description: "from story_agent"}, ...],
       "progress": 0.1,
-      "initiative": ["...", "..."],
       "suggested_actions": ["...", "...", "..."]
     }
 
