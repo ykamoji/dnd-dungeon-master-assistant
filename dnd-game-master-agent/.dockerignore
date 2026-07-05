@@ -8,7 +8,7 @@
 .ruff_cache/
 
 # Local ADK session store & logs (must not leak into the image)
-# app/.adk/
+app/.adk/
 logs/
 *.log
 
