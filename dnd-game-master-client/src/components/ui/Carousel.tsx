@@ -1,13 +1,17 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface CarouselProps {
   images: { src: string; alt: string }[];
   intervalMs?: number;
   bordered?: boolean;
   showDots?: boolean;
+  /** Controlled mode: when provided, the parent owns the active slide (so
+   *  external markers can track/drive it). Omit for self-managed rotation. */
+  index?: number;
+  onIndexChange?: (index: number) => void;
 }
 
 /** Fade in/out image slideshow that auto-rotates. */
@@ -16,17 +20,34 @@ export function Carousel({
   intervalMs = 8000,
   bordered = true,
   showDots = true,
+  index: controlledIndex,
+  onIndexChange,
 }: CarouselProps) {
-  const [index, setIndex] = useState(0);
+  const [internalIndex, setInternalIndex] = useState(0);
+  const isControlled = controlledIndex !== undefined;
+  const index = isControlled ? controlledIndex : internalIndex;
+
+  const setIndex = useCallback(
+    (next: number) => {
+      if (isControlled) onIndexChange?.(next);
+      else setInternalIndex(next);
+    },
+    [isControlled, onIndexChange],
+  );
+
+  // Ref keeps the interval callback reading the latest index without resetting
+  // the timer on every change (works for both controlled + uncontrolled).
+  const indexRef = useRef(index);
+  indexRef.current = index;
 
   useEffect(() => {
     if (images.length <= 1) return;
     const id = setInterval(
-      () => setIndex((i) => (i + 1) % images.length),
+      () => setIndex((indexRef.current + 1) % images.length),
       intervalMs,
     );
     return () => clearInterval(id);
-  }, [images.length, intervalMs]);
+  }, [images.length, intervalMs, setIndex]);
 
   return (
     <div

@@ -22,6 +22,7 @@ const emptyMember = (): PartyMember => ({
   name: "",
   className: "",
   role: "",
+  skills: [],
 });
 
 /** New-campaign step 2: assemble the party, then dissolve into the console. */
@@ -36,7 +37,7 @@ export function PartySelectView() {
     dispatch({ type: "SET_PARTY", party: next });
 
   const updateMember = (m: PartyMember) =>
-    setParty(party.map((p) => (p.id === m.id ? m : p)));
+    dispatch({ type: "UPDATE_PARTY_MEMBER", member: m });
 
   const removeMember = (id: string) =>
     setParty(party.filter((p) => p.id !== id));
@@ -57,9 +58,6 @@ export function PartySelectView() {
         <h2 className="text-gilded font-display text-3xl font-bold tracking-wide sm:text-4xl">
           Assemble Your Party
         </h2>
-        <p className="mt-2 font-rune text-parchment-dim">
-          Name your heroes, choose a class, and pick an archetype role — up to six.
-        </p>
       </div>
 
       {loading && (
@@ -126,7 +124,7 @@ export function PartySelectView() {
           </div>
 
           {/* Right: DNA profile panel (placeholder until a class is inspected) */}
-          <aside className="parchment scroll-thin max-h-[68vh] self-start overflow-y-auto rounded-card border border-gold/30 p-6">
+          <aside className="parchment self-start rounded-card border border-gold/30 p-6">
             {dnaProfile ? (
               <ClassDnaProfile profile={dnaProfile} />
             ) : (

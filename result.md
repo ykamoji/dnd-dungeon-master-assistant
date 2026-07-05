@@ -1,0 +1,198 @@
+# The AI Dungeon Master: A Multi-Agent Game Master for Dungeons & Dragons
+
+### The forever DM: an ADK 2.0 graph of specialist agents that narrates, role-plays, and referees a full tabletop campaign — where every agent is fact-checked by another before you read a word
+
+**Track:** Freestyle
+
+---
+
+## The problem
+
+A Dungeon Master is four people wearing one hat. In a single breath they are a **novelist** narrating a scene, an **improv actor** voicing a dozen characters, a **rules lawyer** adjudicating combat from a dense rulebook, and a **continuity editor** tracking the state of an entire evolving world. It takes years to do well — and if nobody at your table can (or wants to) do it, the game never happens. That missing person is the bottleneck keeping millions away from one of the world's great storytelling games.
+
+The tempting fix is to throw a single large prompt at it: "be a Dungeon Master." That fails in a specific way, because the four jobs pull against each other: one model juggling all of them hallucinates rules, invents characters that were never in the module, fudges hit-point math, and loses track of who is even in the party. The hard part was never *generating text* — it is **keeping a long-running, stateful game honest across dozens of turns**. So instead of one narrator, this project builds four specialists and a referee that fact-checks every one of them.
+
+## The solution
+
+**What I built is a playable web app that runs a full D&D campaign with no human DM:** you name a campaign, assemble a party, and type what you want to do — *haggle with a merchant prince in Port Nyanzaru, or hold the line as raptors burst from the jungle* — and the game narrates the scene, voices the NPCs who answer, resolves the combat by the rulebook, shows the module's artwork, and asks you to approve each turn before it is committed. Under the hood it is a **Google ADK 2.0 graph workflow** over FastAPI (with a Next.js play surface): a single orchestration module wires the agents into a directed graph with guardrails, intent routing, self-correcting specialist loops, the approval gate, and durable state. It runs the full five-chapter *Tomb of Annihilation* end to end — 140 source files and 461 NPC and monster stat blocks — and demonstrates **five of the six course concepts, well beyond the required three.**
+
+## Why agents
+
+Those four conflicting jobs are exactly what a multi-agent system is built for. Instead of one model juggling everything, the work is **decomposed into specialists** — each with a narrow mandate, its own model configuration, its own tools, and its own definition of "correct":
+
+- A **Session Zero Coordinator** that runs once before play to build the campaign and party from the opening message, deriving each member's starting HP and loadout from their class.
+- A **Combat & Rules Arbiter** that resolves actions strictly by D&D 5e mechanics and shows its math.
+- A **Character Actor** that voices NPCs in-character, grounded in the module's written dialogue.
+- A **Lorekeeper & Scene Director** that frames scenes and tracks world progression.
+- A **Module Librarian** that retrieves canonical source text so the others never invent lore.
+
+This separation buys the one thing a single prompt cannot: **every agent is fact-checked by a second agent before a single word reaches the player.** Because each specialist does exactly one job, each is paired with an **evaluator** that validates its work and sends it back — with specific corrections — until it passes. The whole pipeline is a **directed graph**, not a linear chain, so each player message is routed to precisely the right specialist. Agents here are not a decorative wrapper; the correctness of a forty-turn campaign *depends* on the separation.
+
+---
+
+## Architecture — the ADK graph
+
+The workflow is deliberately a **graph, not a linear chain**. A player message enters at an entry node and routes to one of three branches — blocked input, first-turn setup, or a normal turn — and normal turns route again by intent to a specialist.
+
+### Flow 1 — Overall agent architecture
+
+```
+                                   ┌─────────────┐
+                    player message │    START    │
+                                   └──────┬──────┘
+                                          ▼
+                            ┌──────────────────────────┐
+                            │        prepare           │  entry node:
+                            │  • reset per-turn state   │  regex guardrail,
+                            │  • decode Pub/Sub payload │  load campaign,
+                            │  • input guardrail        │  derive campaign_id
+                            │  • load campaign state    │
+                            └───────┬─────────┬─────────┘
+                       "blocked"    │ "setup" │  "safe"
+                 ┌──────────────────┘         │         └───────────────────┐
+                 ▼                             ▼                             ▼
+          ┌────────────┐            ┌────────────────────┐          ┌────────────────┐
+          │   refuse   │            │    setup_agent     │          │   classifier   │
+          │  (END)     │            │  (LoopAgent)       │          │  intent triage │
+          │ safe canned│            │ build campaign +   │          │  → ONE label   │
+          │  refusal   │            │ party from opening │          └───────┬────────┘
+          └────────────┘            └─────────┬──────────┘                  ▼
+                                              ▼                     ┌────────────────┐
+                                    ┌────────────────────┐          │  route_intent  │
+                                    │   setup_finalize   │          │ read label →   │
+                                    │  (END) persist the │          │ pick branch    │
+                                    │  campaign skeleton │          └───┬────┬────┬──┘
+                                    └────────────────────┘     ACTION │    │    │ CAMPAIGN
+                                                                      ▼    ▼    ▼
+                                                        ┌──────────────┐ ┌────────┐ ┌───────────────┐
+                                                        │ action_agent │ │npc_    │ │ campaign_agent│
+                                                        │  (LoopAgent) │ │dialogue│ │  (LoopAgent)  │
+                                                        │ Combat/Rules │ │_agent  │ │  Lorekeeper   │
+                                                        └──────┬───────┘ └───┬────┘ └───────┬───────┘
+                                                               └─────────────┼─────────────┘
+                                                                             ▼
+                                                                     ┌────────────────┐
+                                                                     │     result     │  format draft →
+                                                                     │  build gm_resp │  gm_response JSON
+                                                                     └───────┬────────┘
+                                                                             ▼
+                                                                     ┌────────────────┐
+                                                                     │   hitl_gate    │  ⏸ RequestInput
+                                                                     │  human approve │  pause → resume
+                                                                     │  /reject       │  persist on OK
+                                                                     └───────┬────────┘
+                                                                             ▼
+                                                                           (END)
+                                                                     player-facing output
+```
+
+Three design decisions make this robust:
+
+**The entry node does the un-glamorous work.** It resets per-turn state, decodes the incoming message (the client drives the game over a Pub/Sub-style ambient channel, so payloads arrive wrapped in an envelope; plain text still passes through for tests and the playground), runs the guardrail, derives the campaign identifier, and loads the current campaign state. It then emits a single routing decision — block, set up, or proceed.
+
+**Setup is a one-time subgraph.** On a campaign's first turn there is no party or world yet, so the entry node routes to the setup agent, which parses the opening message into a campaign name and roster, derives each class's starting HP and proficiencies, and builds the opening scene. A dedicated finalize step then persists the new campaign **deterministically in code** — never trusting the model to emit the database write itself — and refuses to create anything unless the setup result is explicitly ready.
+
+**Approval is a first-class graph node.** After a specialist produces a draft, the human-in-the-loop gate pauses the entire run and shows the draft to the player. Only on approval does the turn commit to the durable campaign — powered by ADK's resumable-run support, so a paused game resumes exactly where it left off.
+
+### Flow 2 — The specialist loop (executor + evaluator)
+
+All three specialists — and the setup agent — share the **same self-correcting pattern**: an ADK `LoopAgent` pairing an **executor** (the LLM that drafts and calls tools) with an **evaluator** (a deterministic agent that validates the draft and either ends the loop or forces a retry with feedback, up to three iterations).
+
+```
+             ┌──────────────────────── LoopAgent (max_iterations = 3) ───────────────────────┐
+             │                                                                               │
+   intent →  │   ┌─────────────────────┐         draft (JSON)      ┌─────────────────────┐   │
+   branch    │   │      *_executor     │ ───────────────────────▶ │     *_evaluator     │   │
+             │   │  LLM + tools        │                          │  (BaseAgent)         │   │
+             │   │  • reads state:     │                          │  1. schema validate  │   │
+             │   │    {campaign_state} │                          │     (Pydantic)       │   │
+             │   │    {last_player_    │                          │  2. semantic judge   │   │
+             │   │     action}         │                          │     (LLM QA grade)   │   │
+             │   │    {eval_feedback}  │ ◀──── eval_feedback ───── │                      │   │
+             │   │  • parallel tool    │   "fix exactly this"     └──────────┬───────────┘   │
+             │   │    batch            │        (retry)                      │               │
+             │   └─────────────────────┘                          pass │     │ fail          │
+             │                                                         │     └──► loop again  │
+             └─────────────────────────────────────────────────────────┼─────────────────────┘
+                                                                        ▼  escalate = True
+                                                          writes *_result to state → result node
+```
+
+The evaluator runs **two gates in sequence**. First a **structural gate**: it parses the model's reply and validates it against that specialist's strict output schema; if the draft doesn't conform, the exact validation errors go back to the executor as precise corrections for the next attempt. Second, a **semantic gate**: a separate LLM acting as a "Quality Assurance Judge" grades whether the draft addresses the player's query, respects the rules, and avoids hallucination, returning pass or fail. Only when *both* gates pass does the evaluator end the loop and hand the result forward. The judge also **fails open**: if the grading call errors, the turn proceeds rather than blocking the game.
+
+This is what keeps a long game honest: a hallucinated hit-point total, or a shopkeeper conjured from thin air who was never in Port Nyanzaru, is caught and corrected before the player ever sees it.
+
+### The three specialists
+
+Each executor is **stateless**: it carries no chat history and is a pure function of the state injected into its prompt — the current campaign snapshot, the player's message, and any retry feedback. Every executor is told, emphatically, that it knows nothing — party state, stat blocks, lore — until a tool returns it; simulating a tool result is explicitly forbidden.
+
+- **Combat & Rules Arbiter.** When a velociraptor bursts from the undergrowth, this is the agent that rolls the attack in the open — *1d20+4 vs AC 15, a hit for 7 piercing* — and never fudges the number. It resolves actions under 5e rules, shows every die roll and modifier, and reports resulting HP/conditions *only* when a tool confirms them. Runs on the highest-reasoning model configuration and can call every tool — party state, stat blocks, rules, and the Module Librarian.
+- **Character Actor.** Voices NPCs in-character. It pulls the NPC's "DNA profile" (personality, motivation, voice) from the stat-block lookup, fetches the module's *written* lines from the Module Librarian, and grounds the dialogue in both — voice from the profile, content from the module. It might deliver Syndra Silvane's desperate plea to end the death curse in one breath and a dockside vendor's haggling in the next, each in its own voice.
+- **Lorekeeper & Scene Director.** It knows that Chult is a death-cursed jungle and that the tomb at its heart is quietly draining souls, and frames each scene accordingly. It tracks how far the campaign has progressed and surfaces the matching art — drawing chapter, section, and image references from the Module Librarian rather than inventing them.
+
+### Flow 3 — Tools, and the Module Librarian as a tool
+
+The cleverest structural move is that **the Module Librarian is itself an agent, exposed to the other agents as a tool** via ADK's `AgentTool` wrapper. It is the *only* component allowed to touch the adventure's source text. This enforces a clean boundary: specialists reason about mechanics and narrative, and delegate every "what does the module actually say?" question to one librarian.
+
+```
+   ┌───────────────────────────────────────────────────────────────────────────┐
+   │  Specialist executor (action / npc / campaign / setup)                     │
+   │                                                                            │
+   │  issues ONE PARALLEL BATCH of tool calls ──────────────┐                   │
+   └──────────┬──────────────┬──────────────┬───────────────┼───────────────────┘
+              ▼              ▼              ▼               ▼
+      ┌──────────────┐ ┌────────────┐ ┌──────────────┐ ┌──────────────────────────┐
+      │  get_state   │ │  lookup_   │ │  lookup_     │ │       story_tool         │
+      │ (MongoDB     │ │ character  │ │ character_   │ │  = AgentTool(story_agent)│
+      │  campaign    │ │ (Appendix  │ │ resource     │ │  ┌────────────────────┐  │
+      │  party/scene)│ │  D.csv NPC │ │ (Open5e:     │ │  │  story_agent       │  │
+      └──────────────┘ │  statblock)│ │ spells/class │ │  │  "Module Librarian"│  │
+                       └────────────┘ │ /armor/wpns) │ │  │  • KNOWLEDGE INDEX  │  │
+                                      └──────────────┘ │  │    + ASSET INDEX    │  │
+                                                       │  │    baked into prompt│  │
+      natural-language lore question (BY NAME only, ──▶│  │  • calls tool ↓     │  │
+      never an ID) ────────────────────────────────── │  └─────────┬──────────┘  │
+                                                       │            ▼             │
+                                                       │  ┌────────────────────┐  │
+                                                       │  │ fetch_campaign_    │  │
+                                                       │  │ files (reads docs/ │  │
+                                                       │  │ Tomb-of-Annihila-  │  │
+                                                       │  │ tion/*.md, path-   │  │
+                                                       │  │ traversal guarded) │  │
+                                                       │  └────────────────────┘  │
+                                                       │  returns StoryResult:    │
+                                                       │  {found, chapter,        │
+                                                       │   section, source_path,  │
+                                                       │   content, assets[]}     │
+                                                       └──────────────────────────┘
+```
+
+The Librarian's contract is strict and deliberate. Its **tool description** tells callers exactly what to pass — a natural-language question *by name* — and never a campaign ID, session ID, or player state. Its prompt bakes in the entire knowledge and asset indexes, so it knows which files exist before reading any source text, and returns a structured result with the answer, its source file, and the matched art. Executors call all their tools in a **single parallel batch** rather than one at a time — a latency optimization ADK supports natively.
+
+The supporting tools are ordinary Python functions registered with ADK: a party-state lookup reads live party and scene data from the database; a stat-block lookup reads NPC and monster stats from the module's 461-entry appendix; and a rules lookup reads from the open-source Open5e dataset — 1,400+ spells, 1,600+ magic items, 3,200+ monsters, and all 12 classes. Lightweight callbacks trace every run — recording which agents and tools fired — for full per-turn observability.
+
+---
+
+## State, sessions, and durability
+
+State is split cleanly: **campaigns** — the durable game world (party, scene, progress, history) — live in **MongoDB**, while **sessions** — the per-run decision trace — live in ADK's session service. When that service is in-memory (the Cloud Run default), a persistence plugin backs it with MongoDB and rehydrates on boot, so a paused, awaiting-approval turn survives a serverless restart — your cleric's last 4 hit points and the half-fought battle with a giant crocodile waiting exactly where you left them.
+
+## Demonstrated course concepts
+
+The five concepts on display:
+
+1. **Multi-agent system (ADK)** — *the core.* A graph workflow orchestrating an intent classifier, three self-correcting specialist loops, a one-time setup subgraph, and an agent-exposed-as-a-tool, all with structured, schema-validated I/O.
+2. **Security features** — an input guardrail at the graph entry blocks prompt-injection and out-of-scope requests with safe, canned refusals; every specialist is forbidden from acting on data a tool hasn't verified; the file-reading tool guards against directory traversal; and no secrets live in code.
+3. **Deployability** — the backend and client each deploy as a Cloud Run service with committed scripts and Dockerfiles, fronted by ADK's built-in FastAPI server.
+4. **Agent skills (Agents CLI)** — the repo uses the Google Agents CLI scaffolding, and I authored a **custom skill, `session-trace-analysis`**, that renders ADK's per-run event stream — model thoughts, tool calls, state changes — into a readable debugging timeline.
+5. **Antigravity** — the entire app was built with agentic "vibe coding" in Antigravity and Claude Code.
+
+## The build journey
+
+The whole system was built through **agentic development** — Antigravity and Claude Code — with every prompt archived publicly. The hardest part was not writing agents but *debugging* them: when a turn misbehaved, the final database state told me nothing about *why*. So I built the `session-trace-analysis` skill to read ADK's per-event decision trace, and handed that trace to the coding agent to fix issues precisely. The codebase is guarded by **unit and integration tests** covering the guardrails, the agents, and the full approval-and-resume workflow, run after every change.
+
+## Try it
+
+The live app is linked with this writeup — judges can play a turn directly — alongside the full public repository, whose `README.md` and `CLAUDE.md` carry the complete setup, deployment, and architecture guides. **No API keys or secrets are committed**; every credential is supplied through environment variables.
+
+The goal behind all of it is simple: a **forever DM** — so that anyone who has never had someone to run the table can still open the door, roll the dice, and step into the jungle.

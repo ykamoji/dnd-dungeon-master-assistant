@@ -67,6 +67,61 @@ body {
   color: transparent;
 }
 
+/* Carved-stone heading fill: class `.text-carved-stone`
+   Real stone texture (public/textures/stone.jpg) overlaid on a light→dark tan
+   gradient, clipped to the glyphs; layered text-shadows give chiseled depth and
+   the `#stone` SVG displacement filter (in Hero) fractures the edges into cracks.
+   The `::before` paints a gold carved outline via -webkit-text-stroke, using
+   `data-text` — so this class must sit on each text element (per line), not a
+   wrapper. Requires: element has `position: relative` (set here) + `data-text`.
+   NOTE: drop a real texture at public/textures/stone.jpg — until then the
+   gradient alone shows (the url() layer silently no-ops). */
+.text-carved-stone {
+  position: relative;
+  font-family: "Cinzel", var(--font-cinzel), serif;
+  font-weight: 300;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+
+  /* Stone texture over tan gradient */
+  background:
+    url("/texture.png") linear-gradient(180deg,
+      #f5e7c7 0%,
+      #d8c39b 30%,
+      #a78b63 70%,
+      #5c432b 100%);
+  background-size: cover;
+  background-blend-mode: overlay;
+
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+
+  /* Depth */
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.45),
+    0 2px 0 rgba(220, 190, 140, 0.55),
+    0 3px 2px rgba(0, 0, 0, 0.35),
+    0 6px 10px rgba(0, 0, 0, 0.45),
+    0 12px 28px rgba(0, 0, 0, 0.55);
+
+  /* Cracks (edge displacement) + cast shadow */
+  /* filter: url(#stone) drop-shadow(0 10px 20px rgba(0, 0, 0, 0.45)); */
+}
+
+/* Carved gold outline — duplicates the glyphs behind the fill via data-text */
+.text-carved-stone::before {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  color: transparent;
+  -webkit-text-stroke: 2px #d8b67d;
+  text-shadow:
+    0 0 2px rgba(255, 220, 150, 0.6),
+    0 0 8px rgba(255, 190, 80, 0.25);
+  pointer-events: none;
+}
+
 /* Thin themed scrollbar for inner scroll panels */
 .scroll-thin {
   scrollbar-width: thin;

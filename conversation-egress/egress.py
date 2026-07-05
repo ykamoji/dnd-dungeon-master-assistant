@@ -40,7 +40,7 @@ LOG_SOURCES = {
 # Files in the log directories that are not conversation logs.
 IGNORED_FILES = {"debug_payload.json"}
 
-USER_NAME = "google_hackathon"
+USER_NAME = "Google Kaggle Vibe Coding"
 
 
 def load_logs() -> list[dict]:

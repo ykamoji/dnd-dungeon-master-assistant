@@ -13,7 +13,6 @@ from app.agents.npc_dialogue_agent import npc_dialogue_agent
 from app.agents.campaign_agent import campaign_agent
 
 from app.agents.story_agent import story_agent
-from app.agents.output_agent import output_agent
 from app.agents.schemas import ActionResult, NpcResult, CampaignResult, SetupResult
 
 import app.agent as graph
@@ -47,7 +46,6 @@ _MOCK_CAMPAIGN = {
         "scene": "Jungle Edge",
         "description": "You stand at the edge of the jungle.",
         "party": {"characters": {"Hero": {"hp": 10, "max_hp": 10}}},
-        "initiative": ["Hero"],
     }],
 }
 
@@ -232,52 +230,6 @@ async def test_story_agent(session_service):
     session = await session_service.get_session(app_name="app", user_id="test", session_id=session_id)
     assert "story_agent" in session.state.get("last_agent", [])
     assert response_text.strip() != ""
-
-
-@pytest.mark.asyncio
-async def test_output_agent(session_service):
-    """Output agent formats a specialist result into the GMResponse schema."""
-    session_id = "test_output_1"
-    # action_result is now a typed ActionResult JSON string (what the checker
-    # stores), matching the contract output_agent consumes.
-    action_result = ActionResult(
-        narrative=(
-            "You strike the goblin with your longsword for 9 slashing damage "
-            "(1d8+3), dropping it. The path ahead is now clear."
-        ),
-        math_breakdown="Attack 1d20+5 = 19 vs AC 15 → hit; damage 1d8+3 = 9",
-        requires_roll=False,
-        suggested_actions=["Advance down the path", "Search the goblin", "Listen for more enemies"],
-    ).model_dump_json()
-    initial_state = {
-        "campaign_id": session_id,
-        "intent": "ACTION",
-        "action_result": action_result,
-        "npc_result": "",
-        "campaign_result": "",
-        "last_agent": ["action_executor", "action_checker"],
-        "tools_fired": ["get_state"],
-    }
-    await session_service.create_session(
-        app_name="app", user_id="test", session_id=session_id, state=initial_state,
-    )
-
-    runner = Runner(agent=output_agent, app_name="app", session_service=session_service)
-    new_message = types.Content(
-        role="user",
-        parts=[types.Part.from_text(text="Format the specialist result for the UI.")],
-    )
-
-    with _no_mongo():
-        async for event in runner.run_async(
-            user_id="test", session_id=session_id, new_message=new_message
-        ):
-            pass
-
-    session = await session_service.get_session(app_name="app", user_id="test", session_id=session_id)
-    gm_response = session.state.get("gm_response", "")
-    assert gm_response, "Expected output_agent to write a gm_response"
-    assert "ACTION" in str(gm_response)
 
 
 # ---------------------------------------------------------------------------

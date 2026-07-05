@@ -40,6 +40,7 @@ export interface PartyMember {
   name: string;
   className: string; // D&D class (e.g. "Ranger")
   role: string; // archetype name, or a preset label like "The Navigator"
+  skills?: string[]; // Array of selected skills
 }
 
 /** An entry in the campaign catalog shown in the campaign-select view. */
@@ -89,11 +90,21 @@ export interface CharacterState {
   spells: string[];
   weapons: string[];
   magicitems: string[];
+  /** Proficient skills — optional; rendered when the backend supplies them. */
+  skills?: string[];
 }
 
 /** The party's mechanical state, keyed by character name. */
 export interface PartyState {
   characters: Record<string, CharacterState>;
+}
+
+/** The party's state */
+export interface PartyBreakDown {
+  level: number;
+  perception: number;
+  health: number;
+  money: number;
 }
 
 /** Scene metadata for a turn (the GM-facing extras). */
@@ -117,8 +128,8 @@ export interface TurnSnapshot {
   narrative?: string | null;
   npc_name?: string | null;
   dialogue?: DialogueLine[] | null;
-  initiative?: string[] | null;
   party?: PartyState | null;
+  party_breakdown?: PartyBreakDown | null;
   metadata?: CampaignMetadata | null;
   intent?: string | null;
   created_dt?: string;

@@ -72,6 +72,7 @@ export type GameAction =
   | { type: "GO_TO"; index: number }
   | { type: "SELECT_GAME"; gameId: string }
   | { type: "SET_PARTY"; party: PartyMember[] }
+  | { type: "UPDATE_PARTY_MEMBER"; member: PartyMember }
   | { type: "PRELOAD_PARTY" }
   | { type: "SELECT_CAMPAIGN"; campaignId: string }
   | { type: "BEGIN_NEW_CAMPAIGN" }
@@ -137,6 +138,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       };
     case "SET_PARTY":
       return { ...state, party: action.party };
+    case "UPDATE_PARTY_MEMBER":
+      return {
+        ...state,
+        party: state.party.map((p) =>
+          p.id === action.member.id ? action.member : p
+        ),
+      };
     case "PRELOAD_PARTY":
       return {
         ...state,

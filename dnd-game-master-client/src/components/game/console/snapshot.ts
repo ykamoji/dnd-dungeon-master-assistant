@@ -29,7 +29,7 @@ export function sceneLabel(s: TurnSnapshot): string {
 
 /** The first scene image of a turn, if any. */
 export function firstAsset(s: TurnSnapshot): string | undefined {
-  if (s.metadata?.assets?.find(Boolean)?.URL.endsWith(".svg")) {
+  if (s.metadata?.assets?.find(Boolean)?.URL.endsWith(".webp")) {
     return "https://raw.githubusercontent.com/5etools-mirror-3/5etools-img/main/adventure/ToA/" + s.metadata?.assets?.find(Boolean)?.URL;
   }
 }

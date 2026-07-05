@@ -1,3 +1,4 @@
+from app.agents.schemas import PartyBreakDown
 import datetime
 from typing import Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field
@@ -34,6 +35,7 @@ class CharacterState(BaseModel):
     max_hp: int = Field(description="Maximum hit points")
     conditions: List[str] = Field(default_factory=list, description="List of current status conditions")
     armors: List[str] = Field(default_factory=list, description="Armor the character currently has equipped/owned")
+    skills: list[str] = Field(default_factory=list, description="Skills that the character is proficient in")
     spells: List[str] = Field(default_factory=list, description="Spells the character currently has prepared/known")
     weapons: List[str] = Field(default_factory=list, description="Weapons the character currently carries")
     magicitems: List[str] = Field(default_factory=list, description="Magic items the character currently possesses")
@@ -109,9 +111,17 @@ def get_state(campaign_id: str) -> Optional[Dict]:
     combat_log = metadata.get("combat_log")
     if not combat_log:
         for snap in reversed(states):
-            snap_combat = (snap.get("metadata") or {}).get("combat_log")
-            if snap_combat:
-                combat_log = snap_combat
+            snap_meta = snap.get("metadata") or {}
+            if not combat_log and snap_meta.get("combat_log"):
+                combat_log = snap_meta.get("combat_log")
+                break
+                
+    # Back-fill party_breakdown (lives at root): latest's own, else most recent non-empty.
+    party_breakdown = latest.get("party_breakdown")
+    if not party_breakdown:
+        for snap in reversed(states):
+            if snap.get("party_breakdown"):
+                party_breakdown = snap.get("party_breakdown")
                 break
 
     # Inject the recovered live combat context into the returned snapshot's metadata.
@@ -120,6 +130,9 @@ def get_state(campaign_id: str) -> Optional[Dict]:
     if combat_log:
         metadata["combat_log"] = combat_log
     latest["metadata"] = metadata
+    
+    if party_breakdown:
+        latest["party_breakdown"] = party_breakdown
 
     campaign["state"] = [latest]
     return campaign
@@ -132,12 +145,12 @@ def update_campaign(
     scene: Optional[str] = None,
     description: Optional[str] = None,
     metadata: Optional[CampaignMetadata] = None,
-    initiative: Optional[List[str]] = None,
     party: Optional[PartyState] = None,
     npc_name: Optional[str] = None,
     narrative: Optional[str] = None,
     dialogue: Optional[List[DialogueLine]] = None,
     intent: Optional[str] = None,
+    party_breakdown: Optional[PartyBreakDown] = None,
 ) -> Dict:
     """Update campaign properties or append a new turn state to the campaign.
 
@@ -146,12 +159,12 @@ def update_campaign(
         campaign_name: The name of the adventure module.
         summary: Optional high-level summary of the campaign so far.
         progress: Optional completion percentage (0-100).
-        scene: Title of the current scene. (Requires description, metadata, initiative, and party to append a turn)
+        scene: Title of the current scene. (Requires description, metadata, and party to append a turn)
         description: Natural language description of the current situation.
         metadata: CampaignMetadata object containing chapter, section, assets,
                   gm_notes, next_scene_suggestions, and suggested_actions.
-        initiative: Ordered list of characters in initiative order.
         party: PartyState object mapping character names to their hp, max_hp, and conditions.
+        party_breakdown: PartyBreakDown to map level, perception and health.
         npc_name: Name of the NPC speaking this turn (for NPC_DIALOGUE turns).
         narrative: The turn's player-facing narrative text.
         dialogue: Ordered NPC dialogue lines (speaker, text, emotion) for this turn.
@@ -184,8 +197,8 @@ def update_campaign(
     # A turn snapshot is persisted whenever any state field is supplied. Fields
     # not supplied this turn are carried forward from the latest stored snapshot,
     # so a partial update (e.g. only party HP) never blanks out the scene,
-    # initiative, or other fields that simply didn't change.
-    snapshot_fields = [scene, description, metadata, initiative, party, npc_name, narrative, dialogue, intent]
+    # or other fields that simply didn't change.
+    snapshot_fields = [scene, description, metadata, party, npc_name, narrative, dialogue, intent, party_breakdown]
     if any(x is not None for x in snapshot_fields):
         existing = col.find_one(
             {"campaign_id": campaign_id}, {"_id": 0, "state": {"$slice": -1}}
@@ -202,8 +215,8 @@ def update_campaign(
             "scene": scene if scene is not None else last.get("scene"),
             "description": description if description is not None else last.get("description"),
             "metadata": _dump(metadata) if metadata is not None else last.get("metadata"),
-            "initiative": initiative if initiative is not None else last.get("initiative"),
             "party": _dump(party) if party is not None else last.get("party"),
+            "party_breakdown": _dump(party_breakdown) if party_breakdown is not None else last.get("party_breakdown"),
             "narrative": narrative if narrative is not None else last.get("narrative"),
             "intent": intent if intent is not None else last.get("intent"),
             "created_dt": now

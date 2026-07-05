@@ -45,8 +45,8 @@ export const PRELOAD_PARTY: Omit<PartyMember, "id">[] = [
 
 /** Landing-page slideshow stills (placeholders + ToA mirror art). */
 export const LANDING_STILLS: { src: string; alt: string }[] = [
-  { src: `${TOA_MIRROR}/004-0201.webp`, alt: "Port Nyanzaru harbor" },
-  { src: `${TOA_MIRROR}/064-501.webp`, alt: "Tomb of the Nine Gods" },
-  { src: `${TOA_MIRROR}/027-0308.webp`, alt: "Firefinger" },
-  { src: `${TOA_MIRROR}/060-401.webp`, alt: "Fane of the Night Serpent" },
+  { src: `landing/bg_1.png`, alt: "bg_1" },
+  { src: `landing/bg_4.png`, alt: "bg_4" },
+  { src: `landing/bg_2.png`, alt: "bg_2" },
+  { src: `landing/bg_3.png`, alt: "bg_3" },
 ];

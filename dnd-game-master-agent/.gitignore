@@ -187,7 +187,7 @@ Thumbs.db
 *.vscode*
 
 # ADK
-.adk/
+# .adk/
 
 # Agent CLI specific
 .persist_vector_store
@@ -202,6 +202,4 @@ my_env.tfvars
 
 # A2A Inspector
 tools/a2a-inspector/
-
-# Cloud Run secrets (never commit / never upload with --source)
 cloudrun.env.yaml
