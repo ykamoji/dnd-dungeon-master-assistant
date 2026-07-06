@@ -55,7 +55,7 @@ export function CampaignSelectView() {
       >
         <p>
           <span className="text-gold-bright">{comingSoon}</span> is still being
-          prepared by the Game Master. For now, only{" "}
+          prepared by the Dungeon Master. For now, only{" "}
           <span className="text-gold-bright">Tomb of Annihilation</span> is ready
           to play.
         </p>

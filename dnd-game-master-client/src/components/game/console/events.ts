@@ -4,7 +4,7 @@ import type { SessionEvent, SessionPart } from "@/lib/types";
 const parts = (ev: SessionEvent): SessionPart[] => ev.content?.parts ?? [];
 
 const agentMap = new Map<string, string>([
-  ["dnd_game_master_agent", "Game Master"],
+  ["dnd_game_master_agent", "Dungeon Master"],
   ["llm_evaluator", "Evaluate"],
   ["campaign_executor", "Campaign"],
   ["CAMPAIGN", "LORE"],

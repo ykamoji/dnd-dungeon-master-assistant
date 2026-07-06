@@ -1,7 +1,7 @@
 ---
 name: session-trace-analysis
 description: >-
-  How to investigate the D&D Game Master agent's runtime behavior using
+  How to investigate the D&D Dungeon Master agent's runtime behavior using
   scripts/dump_session_trace.py, which dumps the ADK session.db event stream —
   model thoughts, tool/function calls, function responses, and state deltas for
   a session. Use this skill WHENEVER you are analyzing, debugging, or

@@ -1,4 +1,4 @@
-// Shared types for the D&D Game Master client.
+// Shared types for the D&D Dungeon Master client.
 
 /** One subclass/archetype of a class — used as a selectable party "role". */
 export interface Archetype {

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Type Definitions for the D&D Game Master Agent.
+"""Type Definitions for the D&D Dungeon Master Agent.
 
 Defines Pydantic models for request structures, schemas, and feedback logging.
 """

@@ -1,4 +1,4 @@
-# D&D Game Master Assistant — Monorepo
+# D&D Dungeon Master Assistant — Monorepo
 
 An AI-powered Dungeon Master. A **Google ADK** multi-agent backend runs the game
 (narration, NPCs, rules/dice, campaign state), and a **Next.js** web client gives

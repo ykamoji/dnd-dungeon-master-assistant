@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""D&D Game Master — ADK 2.0 Graph Workflow.
+"""D&D Dungeon Master — ADK 2.0 Graph Workflow.
 
 The pipeline is a directed graph (not a SequentialAgent):
 
@@ -402,7 +402,7 @@ root_agent = Workflow(
         (campaign_agent, result),
         (result, hitl_gate),
     ],
-    description="D&D Game Master graph: guardrail, intent routing, specialist "
+    description="D&D Dungeon Master graph: guardrail, intent routing, specialist "
                 "agents, HITL approval, and structured output.",
 )
 

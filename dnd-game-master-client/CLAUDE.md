@@ -1,8 +1,8 @@
 @AGENTS.md
 
-# D&D Game Master — Web Client
+# D&D Dungeon Master — Web Client
 
-Next.js front-end for the D&D Game Master Assistant. Talks to the FastAPI backend
+Next.js front-end for the D&D Dungeon Master Assistant. Talks to the FastAPI backend
 in `../dnd-game-master-agent`.
 
 ## Stack

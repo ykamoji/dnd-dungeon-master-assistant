@@ -28,7 +28,7 @@ _OUT_OF_SCOPE_PATTERNS = [
 ]
 
 _INJECTION_REFUSAL = (
-    "⚔️ I'm your D&D Game Master — I can only help with in-game actions, "
+    "⚔️ I'm your D&D Dungeon Master — I can only help with in-game actions, "
     "NPC dialogue, and campaign management. Let's get back to the adventure!"
 )
 _OUT_OF_SCOPE_REFUSAL = (

@@ -11,7 +11,7 @@ export interface ConsoleLayout {
 
 /**
  * Registry of console layouts. Every layout arranges the SAME three feature
- * panels (journey map, scene reader, Game Master), so switching never changes
+ * panels (journey map, scene reader, Dungeon Master), so switching never changes
  * what the GM can do. Add a new layout by appending one entry here.
  */
 export const LAYOUTS: ConsoleLayout[] = [

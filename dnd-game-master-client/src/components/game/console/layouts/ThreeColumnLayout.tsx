@@ -4,7 +4,7 @@ import { JourneyMapPanel } from "../panels/JourneyMapPanel";
 import { SceneReaderPanel } from "../panels/SceneReaderPanel";
 import { GameMasterPanel } from "../panels/GameMasterPanel";
 
-/** Classic VTT split: journey · scene reader · Game Master rail. */
+/** Classic VTT split: journey · scene reader · Dungeon Master rail. */
 export function ThreeColumnLayout() {
   return (
     <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-[16rem_minmax(0,1fr)_24rem]">
