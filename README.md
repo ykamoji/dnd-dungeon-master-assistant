@@ -57,7 +57,7 @@ Open **http://localhost:3000**, pick a campaign, assemble a party, and play. Ful
 ## Repository layout
 
 ```
-dnd-game-master-assistant/
+dnd-dungeon-master-assistant/
 ├── README.md                  ← you are here (high level)
 ├── dnd-game-master-agent/     backend: agents, tools, tests, Makefile
 ├── dnd-game-master-client/    frontend: landing + game console
