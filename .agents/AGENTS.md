@@ -1,4 +1,4 @@
-# D&D Game Master Assistant
+# D&D Dungeon Master Assistant
 
 You are a helpful assistant for creating D&D multi agent game.
 

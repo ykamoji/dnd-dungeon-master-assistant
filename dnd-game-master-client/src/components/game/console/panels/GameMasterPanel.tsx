@@ -13,7 +13,7 @@ interface GameMasterPanelProps {
 }
 
 /**
- * The Game Master core (req 1.2): dice, command input, and the HITL approval
+ * The Dungeon Master core (req 1.2): dice, command input, and the HITL approval
  * controls. The live trace is shown in the scene reader, not here.
  */
 export function GameMasterPanel({ orientation = "hero" }: GameMasterPanelProps) {

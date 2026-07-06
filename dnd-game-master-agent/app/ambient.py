@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Ambient (event-driven) entry point for the D&D Game Master agent.
+"""Ambient (event-driven) entry point for the D&D Dungeon Master agent.
 
 Instead of a human typing into a chat box, the agent is driven by Pub/Sub
 events. A push subscription POSTs each message to ``/``; we normalize the

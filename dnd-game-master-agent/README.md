@@ -1,88 +1,163 @@
-# D&D Game Master Agent
+# D&D Dungeon Master Agent (Backend)
 
-An interactive D&D Game Master assistant built with ADK 2.0 graph workflows. It handles campaigns, narrative generation, and dynamically queries Open5e data and local D&D adventure assets (e.g. Tomb of Annihilation).
+The multi-agent Dungeon Master backend. A **Google ADK 2.0 graph workflow** — guardrail → intent classifier → self-correcting specialist agents → human-approval gate — served over **FastAPI**, with durable campaign state in **MongoDB**. Ships the full *Tomb of Annihilation* module text and Open5e reference data inside the service.
 
-## Project Structure
+> High-level architecture, problem, and agent design: see the [repo root README](../README.md).
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Language | Python 3.11–3.13 (Docker image: `python:3.12-slim`) |
+| Agent framework | `google-adk[gcp]` 2.0 (graph `Workflow`, `LoopAgent`, resumable runs) |
+| API server | FastAPI + Uvicorn (via ADK's `get_fast_api_app`) |
+| LLM | Gemini (`GOOGLE_MODEL` / `SMART_MODEL`); optional local **Ollama** via LiteLLM |
+| Campaign state | MongoDB (`pymongo`) |
+| Session store | ADK sessions — local SQLite (`app/.adk/session.db`) or in-memory backed by a MongoDB persistence plugin on Cloud Run |
+| Package manager | [`uv`](https://docs.astral.sh/uv/) (locked via `uv.lock`) |
+| Scaffolding | [Google Agents CLI](https://pypi.org/project/google-agents-cli/) (`agents-cli-manifest.yaml`) |
+| Quality | `ruff`, `ty`, `codespell`, `pytest` + `pytest-asyncio` |
+| Telemetry | OpenTelemetry → Cloud Trace / Cloud Logging / BigQuery (auto-enabled when deployed) |
+| Deploy | Docker → Cloud Run (`deploy.sh`, source build via Cloud Build) |
+
+## Project structure
 
 ```
 dnd-game-master-agent/
-├── app/                       # Core application code
-│   ├── agent.py               # Main graph workflow logic
-│   ├── custom.py              # Custom FastAPI UI routes
-│   ├── db.py                  # MongoDB client connection
-│   ├── fast_api_app.py        # FastAPI root server
-│   ├── tools/                 # Backend tools (used by agent and UI)
-│   └── app_utils/             # App utilities and helpers
-├── data/                      # Open5e data fetch scripts
-├── smoke_test.py              # E2E Smoke test suite
-├── tests/                     # Unit, integration, and load tests
-└── pyproject.toml             # Project dependencies
+├── app/
+│   ├── agent.py            # THE workflow graph: prepare → guardrail/setup/classify → specialists → HITL gate
+│   ├── fast_api_app.py     # FastAPI entrypoint (ADK get_fast_api_app + routers)
+│   ├── custom.py           # REST router: /campaigns, /campaign/*, /tools/*, /health/db
+│   ├── ambient.py          # Pub/Sub push handler + SSE event stream
+│   ├── db.py               # MongoDB client
+│   ├── agents/             # Agent definitions (supervisor, action, npc, campaign, setup, story, judge)
+│   ├── tools/              # Function tools (campaign CRUD, file fetch, assets, lookups)
+│   └── .env                # ← your local config (never committed)
+├── data/open5e/            # Open5e reference JSON (spells, monsters, classes, …)
+├── docs/                   # Tomb of Annihilation module text (markdown)
+├── assets/                 # Image asset index (desc → URL, no binaries)
+├── scripts/                # dump_session_trace.py, rewind_session.py
+├── tests/                  # unit / integration / eval
+├── Makefile                # install, local, playground, test, … (`make help`)
+├── Dockerfile              # self-contained image (code + docs + assets + data)
+├── local.docker.sh         # build & run the container locally
+├── deploy.sh               # Cloud Run deploy (Cloud Build source deploy)
+└── cloudrun.env.yaml       # Cloud Run env vars (gitignored — create it, see below)
 ```
 
-> 💡 **Tip:** Use [Gemini CLI](https://github.com/google-gemini/gemini-cli) for AI-assisted development - project context is pre-configured in `GEMINI.md`.
+## Prerequisites
 
-## Backend APIs & Tools
+- **Python 3.11–3.13** and [`uv`](https://docs.astral.sh/uv/getting-started/installation/)
+- **Agents CLI**: `uv tool install google-agents-cli`
+- **MongoDB** — a local instance or a free [Atlas](https://www.mongodb.com/atlas) cluster (you need a `MONGO_URI`)
+- **Gemini API key** from [Google AI Studio](https://aistudio.google.com/) — or a local Ollama model (see `USE_LOCAL_LLM`)
+- Docker (container runs only) and the [gcloud SDK](https://cloud.google.com/sdk) (deploys only)
 
-The agent includes a set of custom backend tools that are exposed both as ADK `FunctionTool`s for the LLM graph and directly as HTTP routes for the React frontend UI.
+## Configuration
 
-### State & Campaign Management (MongoDB)
-- **`update_campaign`** (POST `/campaign/{campaign_id}/update`): Updates the campaign summary, progress, or appends a new state turn. 
-- **`get_campaign`** (GET `/campaign/{campaign_id}?include_history=False`): Fetches the campaign summary, progress, and current state turn.
+Create **`app/.env`** (loaded by the app and sourced by the Makefile test targets). For Docker runs, `local.docker.sh` reads a copy at the **agent root** (`.env`) — keep the two in sync.
 
-### Adventure Files & Assets
-- **`fetch_campaign_files`** (POST `/tools/fetch_campaign_files`): Securely reads raw `.md` files from the local `docs/` directory.
-- **`get_asset_url`** (POST `/tools/get_asset_url`): Fuzzy-matches and resolves image URLs from `ASSETS.md`.
+| Variable | Purpose |
+|---|---|
+| `GOOGLE_API_KEY` | Gemini API key |
+| `GOOGLE_MODEL` | Default Gemini model for most agents (e.g. a Flash-class model) |
+| `SMART_MODEL` | Higher-reasoning model for the combat arbiter and the QA judge |
+| `MONGO_URI` | MongoDB connection string (campaign state) |
+| `DB_NAME` | MongoDB database name |
+| `CAMPAIGN_COLLECTION` | Collection for campaigns |
+| `SESSION_COLLECTION` / `EVENT_COLLECTION` | Collections for the session-persistence plugin (Cloud Run) — default `sessions` / `events` |
+| `SESSION_DB_LOCAL` | `1` → use the local SQLite ADK session store (`app/.adk/session.db`) |
+| `SESSION_SERVICE_URI` | Explicit ADK session-service URI (overrides the above; optional) |
+| `USE_LOCAL_LLM` | `1` → route all agents through local Ollama via LiteLLM (no Google quota) |
+| `LOCAL_LLM_MODEL` | Ollama model id (default `ollama_chat/gemma4:e2b-mxfp8`) |
+| `OLLAMA_API_BASE` | Ollama endpoint (default `http://localhost:11434`) |
+| `LOG_LEVEL` | Logging level (Cloud Run) |
+| `ALLOW_ORIGINS` | Comma-separated CORS origins (not needed locally — the client proxies) |
 
-### D&D Rules & Stats Lookups
-- **`lookup_character`** (GET `/tools/lookup_character/{name}`): Pulls full stat blocks for specific campaign NPCs and monsters from `Appendix D.csv`.
-- **`lookup_open5e`** (GET `/tools/lookup_open5e/{resource_type}/{name}`): Fallback query for standard Open5e `monsters`, `spells`, or `classes`.
+🚨 **Never commit secrets.** `app/.env`, root `.env`, and `cloudrun.env.yaml` are gitignored; everything is supplied via environment variables.
 
-### System Health
-- **`health_db`** (GET `/health/db`): Pings MongoDB to verify connection status.
+## Run locally
 
-*(Note: Dice rolling is handled entirely client-side, so no server-side dice API is provided.)*
-
-## Requirements
-
-Before you begin, ensure you have:
-- **uv**: Python package manager (used for all dependency management in this project) - [Install](https://docs.astral.sh/uv/getting-started/installation/)
-- **agents-cli**: Agents CLI - Install with `uv tool install google-agents-cli`
-- **MongoDB**: Provide `MONGO_URI` via `.env` file for campaign state persistence.
-
-## Quick Start
-
-Install required packages:
 ```bash
-make install
+make install        # install dependencies (uv sync via agents-cli)
+make local          # FastAPI server on http://localhost:8000
 ```
 
-Test the tools and routes without the agent:
+Session-store selection: prod `SESSION_SERVICE_URI` → else local SQLite when `SESSION_DB_LOCAL=1` → else in-memory (backed by the MongoDB persistence plugin).
+
+Other useful targets:
+
 ```bash
-make smoke-test
+make playground             # ADK web playground (interactive agent UI)
+make run PROMPT="..."       # run a single prompt through the workflow
+make help                   # list all targets
 ```
 
-Run the local playground:
+Sanity checks: `curl http://localhost:8000/health/db` (MongoDB ping) and `http://localhost:8000/docs` (OpenAPI).
+
+## Run with Docker
+
 ```bash
-make playground
+./local.docker.sh
 ```
 
-## Commands
+This builds the self-contained image (`dnd-gm-agent:local` — code, `docs/`, `assets/`, and Open5e data all baked in), then runs it detached with your root `.env`, mapping **host 8000 → container 8080**. Verify with `curl http://localhost:8000/health/db`; logs via `docker logs -f dnd-gm-agent`.
 
-| Command              | Description                                                                                 |
-| -------------------- | ------------------------------------------------------------------------------------------- |
-| `make install`       | Install dependencies using uv                                                               |
-| `make playground`    | Launch local development environment (agent + API)                                          |
-| `make smoke-test`    | Run smoke tests for tools and custom routes                                                 |
-| `make test`          | Run unit and integration tests                                                              |
-| `agents-cli lint`    | Run code quality checks                                                                     |
-| `agents-cli eval`    | Evaluate agent behavior (generate, grade, analyze, and more)                                |
+## Deploy to Cloud Run
 
----
+One script, re-runnable — each run builds from source via Cloud Build, deploys a new revision, and prunes old images from Artifact Registry:
 
-## Development
+```bash
+# 1. Edit PROJECT / REGION / SERVICE at the top of deploy.sh
+# 2. Create cloudrun.env.yaml (gitignored) with the production env vars
+#    (GOOGLE_API_KEY, GOOGLE_MODEL, SMART_MODEL, MONGO_URI, DB_NAME,
+#     CAMPAIGN_COLLECTION, SESSION_COLLECTION, EVENT_COLLECTION, LOG_LEVEL, …)
+./deploy.sh --dry-run    # print the gcloud commands without running them
+./deploy.sh              # enable APIs, set IAM, build, deploy, prune
+```
 
-Edit your agent logic in `app/agent.py` and tools in `app/tools/`. Test with `make playground` - it auto-reloads on save.
+Deployment shape (deliberately minimal-cost for a demo): `min-instances 0` (scale to zero), `max-instances 1` (single writer for the SQLite⇄Mongo session sync), `concurrency 80` (a console page load fires parallel fetches plus a long-lived SSE stream). The script prints the service URL and a health-check command when done. Deploy this service **before** the client — the client needs this URL at build time.
+
+## Testing & linting
+
+| Command | What it runs |
+|---|---|
+| `make test` | Unit tests (`tests/unit`) — log tee'd to `logs/make-test.log` |
+| `make integration` | Full graph-workflow integration test (`tests/integration/test_agent.py`) |
+| `make gaurdrail-test` | Guardrail/safety tests only |
+| `make eval-supervisor` | Intent-classifier eval (`tests/eval`) |
+| `make smoke-test` | Tools + custom routes, no agent involved (`smoke_test.py`) |
+| `make story-test` | Story agent retrieval check |
+| `make lint` / `make lint-fix` | `ruff` + `ty` + `codespell` via agents-cli |
+
+## Debugging agent behavior
+
+MongoDB only stores the *final* campaign state. To see what an agent actually did on a turn — model thoughts, tool calls, retries, state deltas — dump the ADK event stream:
+
+```bash
+uv run python scripts/dump_session_trace.py <session_id>
+```
+
+(Also available as the `session-trace-analysis` skill in `.claude/skills/`. `scripts/rewind_session.py` rolls a campaign back one turn.)
+
+## API surface
+
+ADK built-ins: `/run`, `/run_sse` (streamed event trace), session CRUD under `/apps/*`, web playground at `/` in playground mode.
+
+Custom routes:
+
+| Route | Purpose |
+|---|---|
+| `POST /` | Ambient Pub/Sub push handler — the client submits turns here (proxied as `/ambient`) |
+| `GET /ambient/sessions/{id}/stream` | SSE live event stream consumed by the game console |
+| `GET /campaigns`, `GET/POST/DELETE /campaign/{id}…` | Campaign state read/update/delete (MongoDB) |
+| `GET /tools/classes`, `/tools/lookup_character/{name}`, `/tools/lookup_character_resource/{type}/{name}` | Class, NPC stat-block, and Open5e lookups |
+| `POST /tools/fetch_campaign_files`, `POST /tools/get_asset_url` | Module text fetch (traversal-guarded) and art URL resolution |
+| `GET /api/live-token` | Mints an ephemeral Gemini Live token for the browser's voice (STT) connection |
+| `GET /health/db` | MongoDB connectivity check |
+| `DELETE /session/{id}` | Rewind/delete a session |
+| `POST /feedback` | Structured feedback logging |
 
 ## Observability
 
-GCP telemetry is disabled by default for local development to avoid missing credentials errors. Built-in telemetry exports to Cloud Trace, BigQuery, and Cloud Logging when deployed.
+GCP telemetry is disabled by default locally (no credentials needed). When deployed, built-in telemetry exports traces, logs, and metrics to Cloud Trace, Cloud Logging, and BigQuery. Lightweight callbacks additionally record which agents and tools fired on every turn.

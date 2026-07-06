@@ -20,7 +20,7 @@ const garamond = EB_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "D&D Game Master Assistant",
+  title: "D&D Dungeon Master Assistant",
   description:
     "An AI-powered Dungeon Master. Forge a party, choose your adventure, and play.",
   // Browser-tab icon. `public/logos/d20.png` is served at `/logos/d20.png`.

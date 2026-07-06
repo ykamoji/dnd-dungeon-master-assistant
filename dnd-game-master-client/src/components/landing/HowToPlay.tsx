@@ -18,7 +18,7 @@ const STEPS = [
   {
     n: "III",
     title: "Speak and act",
-    body: "Describe what your heroes do. The Game Master narrates outcomes, rolls the dice, and voices the world around you.",
+    body: "Describe what your heroes do. The Dungeon Master narrates outcomes, rolls the dice, and voices the world around you.",
   },
   {
     n: "IV",

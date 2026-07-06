@@ -19,8 +19,8 @@ _judge = Agent(
     name="llm_evaluator",
     model=MODEL,
     include_contents="none",
-    instruction="""You are a D&D Game Master Quality Assurance Judge.
-Your job is to review a drafted response and determine if it is meaningful, logically sound, and directly addresses the game master's or player's query based on the intent.
+    instruction="""You are a D&D Dungeon Master Quality Assurance Judge.
+Your job is to review a drafted response and determine if it is meaningful, logically sound, and directly addresses the Dungeon Master's or player's query based on the intent.
     
 - If the response is good: Grade it as 'pass' and provide a brief sentence on why it works.
 - If the response fails (does not address the query, ignores the player, breaks game rules, or contains hallucinated nonsense): Grade it as 'fail' and provide actionable feedback on exactly what the agent should change.

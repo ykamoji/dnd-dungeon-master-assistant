@@ -1,4 +1,4 @@
-# D&D Game Master — Agent (FastAPI + Google ADK)
+# D&D Dungeon Master — Agent (FastAPI + Google ADK)
 
 Multi-agent Dungeon Master built on **Google ADK 2.0** and served via FastAPI.
 Campaign state lives in **MongoDB**; ADK session state lives in local SQLite.

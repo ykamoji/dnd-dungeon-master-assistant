@@ -63,7 +63,7 @@ class StoryResult(BaseModel):
     chapter: str = Field(default="", description="Chapter this content belongs to (e.g., 'Ch 1 Port Nyanzaru')")
     section: str = Field(default="", description="Section/location/scene name within the chapter (e.g., 'Arrival')")
     source_path: str = Field(default="", description="Repo path of the markdown file the content was drawn from, for citation")
-    content: str = Field(default="", description="Rich, detailed narrative excerpt synthesized from the module, written like a true D&D Game Master")
+    content: str = Field(default="", description="Rich, detailed narrative excerpt synthesized from the module, written like a true D&D Dungeon Master")
     assets: list[Assets] = Field(default_factory=list, description="List of asset file and description for every matching chapter, map, scene, NPC")
 
 

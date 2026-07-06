@@ -68,7 +68,7 @@ async def test_guardrail_blocks_prompt_injection(text):
 
     assert not is_safe
     assert reason == "Prompt injection detected"
-    assert "Game Master" in refusal
+    assert "Dungeon Master" in refusal
 
 
 @pytest.mark.asyncio

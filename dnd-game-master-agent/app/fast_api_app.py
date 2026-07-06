@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""FastAPI Application Server for D&D Game Master Agent.
+"""FastAPI Application Server for D&D Dungeon Master Agent.
 
 Exposes the agent's graph workflow via HTTP endpoints for interaction and playground integration.
 """

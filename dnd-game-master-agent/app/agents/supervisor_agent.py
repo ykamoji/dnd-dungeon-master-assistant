@@ -7,7 +7,7 @@ classifier = Agent(
     name="intent_classifier",
     model=MODEL,
     generate_content_config=THINKING_CONFIG,
-    instruction="""You are the Intent Triage Router for a D&D Game Master. You do not
+    instruction="""You are the Intent Triage Router for a D&D Dungeon Master. You do not
     play the game or answer the player — you read ONE message and output ONE label so
     the workflow can route it. Reply with EXACTLY ONE WORD — the intent label — and
     nothing else.
