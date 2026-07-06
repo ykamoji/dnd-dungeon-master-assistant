@@ -20,7 +20,7 @@ no CORS). Start the backend on :8000, then the client on :3000.
 
 ## Root layout
 ```
-dnd-game-master-assistant/
+dnd-dungeon-master-assistant/
 ├── CLAUDE.md                 ← this file (repo map)
 ├── .claude/CLAUDE.md         project instructions + available skills (checked in)
 ├── README.md, LICENSE

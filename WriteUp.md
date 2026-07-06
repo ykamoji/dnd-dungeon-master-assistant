@@ -101,8 +101,8 @@ The whole system was built through **agentic development** — Antigravity and C
 
 ## Try it
 
-[Live Demo](https://dnd-game-master-client-101298305706.us-east1.run.app/) — deployed on GCP Cloud Run; it may not always be available due to resource constraints.
+[Live Demo](https://dnd-dungeon-master-client-101298305706.us-east1.run.app/) — deployed on GCP Cloud Run; it may not always be available due to resource constraints.
 
-The [public GitHub repository](https://github.com/ykamoji/dnd-game-master-assistant) carries the complete setup, deployment, and architecture guides in its `README.md`. **No API keys or secrets are committed**; every credential is supplied through environment variables.
+The [public GitHub repository](https://github.com/ykamoji/dnd-dungeon-master-assistant) carries the complete setup, deployment, and architecture guides in its `README.md`. **No API keys or secrets are committed**; every credential is supplied through environment variables.
 
 The goal is simple: **a Dungeon Master for every table that lacks one** — so that anyone who has never had someone to run the table can still open the door, roll the dice, and step into the jungle.

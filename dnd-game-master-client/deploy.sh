@@ -20,7 +20,7 @@ set -euo pipefail
 # ── Config ───────────────────────────────────────────────────────────────────
 PROJECT="dnd-game-master-501218"
 REGION="us-east1"
-SERVICE="dnd-game-master-client"
+SERVICE="dnd-dungeon-master-client"
 REPO="cloud-run-source-deploy"        # shared Artifact Registry repo (same as backend)
 ENV_FILE="cloudrun.env.yaml"
 IMAGE_PATH="${REGION}-docker.pkg.dev/${PROJECT}/${REPO}/${SERVICE}"

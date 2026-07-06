@@ -18,7 +18,7 @@ set -euo pipefail
 # ── Config ───────────────────────────────────────────────────────────────────
 PROJECT="dnd-game-master-501218"
 REGION="us-east1"
-SERVICE="dnd-game-master-agent"
+SERVICE="dnd-dungeon-master-agent"
 ENV_FILE="cloudrun.env.yaml"
 # gcloud run deploy --source pushes the built image here (repo/image = service).
 REPO="cloud-run-source-deploy"
