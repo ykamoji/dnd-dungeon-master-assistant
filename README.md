@@ -2,7 +2,11 @@
 
 **A self-correcting, multi-agent Dungeon Master built on Google's ADK and Gemini.** A playable web app that runs a full Dungeons & Dragons campaign with no human DM: behind a security guardrail, an intent classifier routes each turn to a specialist agent — combat, NPC dialogue, or scene — each a self-correcting loop that drafts an answer, calls real tools for grounded data, and is fact-checked before a human-approval gate commits it to durable state. It runs the five-chapter *Tomb of Annihilation* adventure end to end.
 
-🎲 **[Live demo](https://dnd-dungeon-master-client-101298305706.us-east1.run.app/)** (Cloud Run, scale-to-zero — first hit may cold-start) · 📜 [Kaggle writeup](./WriteUp.md) · 🤖 [Prompt archive of the agentic build](https://agent-cli-dashboard.onrender.com/dashboard/group/D%26D%20Game%20Master%20Assistant?demo=Google+Kaggle+Vibe+Coding&expand=true)
+🎲 **[Live demo](https://dnd-dungeon-master-client-101298305706.us-east1.run.app/)** (Cloud Run, scale-to-zero — first hit may cold-start) 
+
+📜 **[Project Report](./WriteUp.md)** 
+
+🤖 **[Prompt archive of the agentic build](https://agent-cli-dashboard.onrender.com/dashboard/group/D%26D%20Game%20Master%20Assistant?demo=Google+Kaggle+Vibe+Coding&expand=true)**
 
 ## The two apps
 
